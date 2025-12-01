@@ -89,7 +89,7 @@ impl FromStr for Role {
 #[serde(rename_all = "camelCase")]
 pub struct Part {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub thought: Option<String>,
+    pub thought: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thought_signature: Option<String>,
     // This is of a Struct type, a Map of values, so either a Value or Map<String, Value> are appropriate.

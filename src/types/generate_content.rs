@@ -123,6 +123,8 @@ pub struct GenerationConfig {
     pub response_mime_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_schema: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking_config: Option<ThinkingConfig>,
 }
 
 impl GenerationConfig {
@@ -182,9 +184,31 @@ impl GenerationConfigBuilder {
         self
     }
 
+    pub fn thinking_config(mut self, thinking_config: ThinkingConfig) -> Self {
+        self.generation_config.thinking_config = Some(thinking_config);
+        self
+    }
+
     pub fn build(self) -> GenerationConfig {
         self.generation_config
     }
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThinkingConfig {
+    pub include_thoughts: bool,
+    pub thinking_budget: isize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking_level: Option<ThinkingLevel>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ThinkingLevel {
+    ThinkingLevelUnspecified,
+    Low,
+    High,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
