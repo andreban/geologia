@@ -337,7 +337,34 @@ pub struct FunctionResponse {
     pub id: Option<String>,
     pub name: String,
     pub response: Value,
-    // TODO: Add missing properties from docs.
+    pub parts: Option<Vec<FunctionResponsePart>>, // TODO: Add missing properties from docs.
+    pub will_continue: Option<bool>,
+    pub scheduling: Option<Scheduling>,
+}
+
+/// See https://ai.google.dev/api/caching#FunctionResponsePart
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum FunctionResponsePart {
+    InlineData(FunctionResponseBlob),
+}
+
+/// See https://ai.google.dev/api/caching#FunctionResponseBlob
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FunctionResponseBlob {
+    pub mime_type: String,
+    pub data: String,
+}
+
+/// See https://ai.google.dev/api/caching#Scheduling
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Scheduling {
+    SchedulingUnspecified,
+    Silent,
+    WhenIdle,
+    Interrupt,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -466,7 +493,7 @@ mod tests {
           },
           "modelVersion": "gemini-3-pro-preview",
           "responseId": "2uUdaYPkG73WvdIP2aPs2Ak"
-        }      
+        }
       "#;
         let _ = serde_json::from_str::<GenerateContentResponseResult>(input).unwrap();
     }
