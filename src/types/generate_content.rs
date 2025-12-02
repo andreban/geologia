@@ -198,7 +198,8 @@ impl GenerationConfigBuilder {
 #[serde(rename_all = "camelCase")]
 pub struct ThinkingConfig {
     pub include_thoughts: bool,
-    pub thinking_budget: isize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking_budget: Option<isize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thinking_level: Option<ThinkingLevel>,
 }
