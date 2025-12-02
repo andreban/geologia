@@ -3,6 +3,8 @@ use std::{fmt::Display, str::FromStr, vec};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::types::FunctionResponse;
+
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Content {
     pub role: Option<Role>,
@@ -118,13 +120,7 @@ pub enum PartData {
         args: Option<Value>,
     },
     // https://ai.google.dev/api/caching#FunctionResponse
-    FunctionResponse {
-        id: Option<String>,
-        name: String,
-        response: Value,
-        will_continue: Option<bool>,
-        // TODO: Add remaining fields.
-    },
+    FunctionResponse(FunctionResponse),
     FileData(Value),
     ExecutableCode(Value),
     CodeExecutionResult(Value),

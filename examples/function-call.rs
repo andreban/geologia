@@ -1,7 +1,8 @@
 use std::{env, error::Error};
 
 use google_genai::prelude::{
-    Content, FunctionDeclaration, GeminiClient, GenerateContentRequest, Part, PartData, Role, Tools,
+    Content, FunctionDeclaration, FunctionResponse, GeminiClient, GenerateContentRequest, Part,
+    PartData, Role, Tools,
 };
 use serde_json::json;
 
@@ -85,12 +86,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         contents.push(Content {
             role: Some(Role::User),
             parts: Some(vec![Part {
-                data: PartData::FunctionResponse {
+                data: PartData::FunctionResponse(FunctionResponse {
                     id: id.clone(),
                     name: name.clone(),
                     response: json!({"result": 1234}),
                     will_continue: None,
-                },
+                    parts: None,
+                    scheduling: None,
+                }),
                 media_resolution: None,
                 part_metadata: None,
                 thought: None,
