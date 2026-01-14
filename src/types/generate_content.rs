@@ -302,7 +302,7 @@ pub struct SafetyRating {
     pub category: String,
     pub probability: String,
     pub probability_score: Option<f32>,
-    pub severity: String,
+    pub severity: Option<String>,
     pub severity_score: Option<f32>,
 }
 
