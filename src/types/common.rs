@@ -24,6 +24,10 @@ impl Content {
         })
     }
 
+    pub fn system_prompt<S: Into<String>>(system_prompt: S) -> Self {
+        Self::builder().add_text_part(system_prompt).build()
+    }
+
     pub fn builder() -> ContentBuilder {
         ContentBuilder::default()
     }
@@ -127,13 +131,13 @@ pub enum PartData {
 }
 
 impl Part {
-    pub fn from_text(text: String) -> Self {
+    pub fn from_text<S: Into<String>>(text: S) -> Self {
         Self {
             thought: None,
             thought_signature: None,
             part_metadata: None,
             media_resolution: None,
-            data: PartData::Text(text),
+            data: PartData::Text(text.into()),
         }
     }
 }
