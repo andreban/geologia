@@ -8,7 +8,9 @@ edition = "2024"
 
 [dependencies]
 deadqueue = "0.2"
-reqwest = { version = "0.13", features = ["json", "gzip"] }
+# reqwest-eventsource is incompatible with reqwest 0.13. Only update after the
+# a new version of reqwest-eventsource is published.
+reqwest = { version = "0.12", features = ["json", "gzip"] }
 reqwest-eventsource = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
