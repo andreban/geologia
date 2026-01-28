@@ -1,6 +1,7 @@
 mod client;
 mod dialogue;
 pub mod error;
+pub mod network;
 mod types;
 
 pub mod prelude {
