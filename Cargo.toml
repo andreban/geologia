@@ -7,7 +7,6 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-deadqueue = "0.2"
 reqwest = { version = "0.13", features = ["json", "gzip", "stream"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
@@ -15,9 +14,7 @@ serde_with = { version = "3.16", features = ["base64"] }
 tracing = "0.1"
 tokio = { version = "1" }
 tokio-stream = "0.1"
-async-stream = "0.3.6"
 tokio-util = "0.7.18"
-async-trait = "0.1.89"
 
 [dev-dependencies]
 console = "0.16.2"

@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
-
-use super::VertexApiError;
+use crate::prelude::VertexApiError;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TextEmbeddingRequest {

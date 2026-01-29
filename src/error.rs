@@ -1,5 +1,4 @@
 use std::fmt::Display;
-
 use tokio_util::codec::LinesCodecError;
 
 use crate::types;

@@ -4,7 +4,6 @@ use crate::network::event_source::{EventSource, ServerSentEvent};
 use crate::prelude::*;
 use crate::types::{PredictImageRequest, PredictImageResponse, Role};
 
-use std::vec;
 use tokio_stream::{Stream, StreamExt};
 use tokio_util::codec::LinesCodecError;
 use tracing::error;
