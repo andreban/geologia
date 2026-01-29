@@ -1,8 +1,6 @@
-use crate::dialogue::Message;
 use crate::error::{Error as GeminiError, Result as GeminiResult};
 use crate::network::event_source::{EventSource, ServerSentEvent};
 use crate::prelude::*;
-use crate::types::{PredictImageRequest, PredictImageResponse, Role};
 
 use tokio_stream::{Stream, StreamExt};
 use tokio_util::codec::LinesCodecError;

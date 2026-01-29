@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{client::GeminiClient, error::Result, types::Role};
+use crate::{error::Result, prelude::*};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Message {
