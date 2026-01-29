@@ -35,6 +35,12 @@ pub struct ServerSentEventsCodec {
     next: ServerSentEvent,
 }
 
+impl Default for ServerSentEventsCodec {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ServerSentEventsCodec {
     pub fn new() -> Self {
         Self {

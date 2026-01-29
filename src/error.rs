@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use reqwest_eventsource::CannotCloneRequestError;
+use tokio_util::codec::LinesCodecError;
 
 use crate::types;
 
@@ -14,8 +14,7 @@ pub enum Error {
     VertexError(types::VertexApiError),
     GeminiError(types::GeminiApiError),
     NoCandidatesError,
-    CannotCloneRequestError(CannotCloneRequestError),
-    EventSourceError(Box<reqwest_eventsource::Error>),
+    EventSourceError(LinesCodecError),
     EventSourceClosedError,
     GenericApiError { status: u16, body: String },
 }
@@ -34,9 +33,6 @@ impl Display for Error {
             }
             Error::NoCandidatesError => {
                 write!(f, "No candidates returned for the prompt")
-            }
-            Error::CannotCloneRequestError(e) => {
-                write!(f, "Cannot clone request: {e}")
             }
             Error::EventSourceError(e) => {
                 write!(f, "EventSourrce Error: {e}")
@@ -83,14 +79,8 @@ impl From<types::GeminiApiError> for Error {
     }
 }
 
-impl From<CannotCloneRequestError> for Error {
-    fn from(e: CannotCloneRequestError) -> Self {
-        Error::CannotCloneRequestError(e)
-    }
-}
-
-impl From<reqwest_eventsource::Error> for Error {
-    fn from(e: reqwest_eventsource::Error) -> Self {
-        Error::EventSourceError(Box::new(e))
+impl From<LinesCodecError> for Error {
+    fn from(e: LinesCodecError) -> Self {
+        Error::EventSourceError(e)
     }
 }
