@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PredictImageRequest {
     pub instances: Vec<PredictImageRequestPrompt>,
     pub parameters: PredictImageRequestParameters,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PredictImageRequestPrompt {
     /// The text prompt for the image.
     /// The following models support different values for this parameter:
@@ -20,7 +20,7 @@ pub struct PredictImageRequestPrompt {
     pub prompt: String,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PredictImageRequestParameters {
     /// The number of images to generate. The default value is 4.
@@ -139,7 +139,7 @@ pub struct PredictImageRequestParameters {
     pub storage_uri: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PredictImageRequestParametersOutputOptions {
     /// The image format that the output should be saved as. The following values are supported:
@@ -155,13 +155,13 @@ pub struct PredictImageRequestParametersOutputOptions {
     pub compression_quality: Option<i32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PredictImageResponse {
     pub predictions: Vec<PredictImageResponsePrediction>,
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PredictImageResponsePrediction {
     #[serde_as(as = "Base64")]
@@ -169,7 +169,7 @@ pub struct PredictImageResponsePrediction {
     pub mime_type: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PersonGeneration {
     DontAllow,
@@ -177,7 +177,7 @@ pub enum PersonGeneration {
     AllowAll,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PredictImageSafetySetting {
     BlockLowAndAbove,

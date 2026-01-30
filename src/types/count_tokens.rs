@@ -4,7 +4,7 @@ use crate::error::{Error, Result};
 
 use super::Content;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CountTokensRequest {
     pub contents: Content,
 }
@@ -15,7 +15,7 @@ impl CountTokensRequest {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct CountTokensRequestBuilder {
     contents: Content,
 }
@@ -37,7 +37,7 @@ impl CountTokensRequestBuilder {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum CountTokensResponse {
     Ok(CountTokensResponseResult),
@@ -53,7 +53,7 @@ impl CountTokensResponse {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CountTokensResponseResult {
     pub total_tokens: i32,

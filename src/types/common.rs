@@ -33,7 +33,7 @@ impl Content {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ContentBuilder {
     content: Content,
 }

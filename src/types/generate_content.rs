@@ -4,7 +4,7 @@ use serde_json::Value;
 use super::{Content, VertexApiError};
 use crate::error::Result;
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateContentRequest {
     pub contents: Vec<Content>,
@@ -24,6 +24,7 @@ impl GenerateContentRequest {
     }
 }
 
+#[derive(Debug)]
 pub struct GenerateContentRequestBuilder {
     request: GenerateContentRequest,
 }
@@ -65,7 +66,7 @@ impl GenerateContentRequestBuilder {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Tools {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub function_declarations: Option<Vec<FunctionDeclaration>>,
@@ -78,10 +79,10 @@ pub struct Tools {
     pub google_search: Option<GoogleSearch>,
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct GoogleSearch {}
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DynamicRetrievalConfig {
     pub mode: String,
@@ -98,7 +99,7 @@ impl Default for DynamicRetrievalConfig {
     }
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GoogleSearchRetrieval {
     pub dynamic_retrieval_config: DynamicRetrievalConfig,
@@ -133,6 +134,7 @@ impl GenerationConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct GenerationConfigBuilder {
     generation_config: GenerationConfig,
 }
@@ -259,7 +261,7 @@ pub enum HarmBlockMethod {
     Probability, // PROBABILITY
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Candidate {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -282,7 +284,7 @@ impl Candidate {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Citation {
     pub start_index: Option<i32>,
@@ -290,13 +292,13 @@ pub struct Citation {
     pub uri: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CitationMetadata {
     #[serde(alias = "citationSources")]
     pub citations: Vec<Citation>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SafetyRating {
     pub category: String,
@@ -306,7 +308,7 @@ pub struct SafetyRating {
     pub severity_score: Option<f32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageMetadata {
     pub candidates_token_count: Option<u32>,
@@ -375,7 +377,7 @@ pub struct FunctionParametersProperty {
     pub description: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum GenerateContentResponse {
     Ok(GenerateContentResponseResult),
@@ -391,14 +393,14 @@ impl From<GenerateContentResponse> for Result<GenerateContentResponseResult> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateContentResponseResult {
     pub candidates: Vec<Candidate>,
     pub usage_metadata: Option<UsageMetadata>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GenerateContentResponseError {
     pub error: VertexApiError,
 }
