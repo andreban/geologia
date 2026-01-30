@@ -14,9 +14,6 @@ pub struct GeminiClient {
     api_key: String,
 }
 
-unsafe impl Send for GeminiClient {}
-unsafe impl Sync for GeminiClient {}
-
 impl GeminiClient {
     pub fn new(api_key: String) -> Self {
         GeminiClient {
