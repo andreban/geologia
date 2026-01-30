@@ -99,45 +99,6 @@ impl GeminiClient {
         }
     }
 
-    /// Prompts a conversation to the model.
-    pub async fn prompt_conversation(
-        &self,
-        messages: &[Message],
-        model: &str,
-    ) -> GeminiResult<Message> {
-        let request = GenerateContentRequest {
-            contents: messages
-                .iter()
-                .map(|m| Content {
-                    role: Some(m.role),
-                    parts: Some(vec![Part::from_text(m.text.clone())]),
-                })
-                .collect(),
-            generation_config: None,
-            tools: None,
-            system_instruction: None,
-            safety_settings: None,
-        };
-
-        let response = self.generate_content(&request, model).await?;
-
-        // Check for errors in the response.
-        let mut candidates = GeminiClient::collect_text_from_response(&response);
-
-        match candidates.pop() {
-            Some(text) => Ok(Message::new(Role::Model, &text)),
-            None => Err(GeminiError::NoCandidatesError),
-        }
-    }
-
-    fn collect_text_from_response(response: &GenerateContentResponseResult) -> Vec<String> {
-        response
-            .candidates
-            .iter()
-            .filter_map(Candidate::get_text)
-            .collect::<Vec<String>>()
-    }
-
     pub async fn text_embeddings(
         &self,
         request: &TextEmbeddingRequest,
