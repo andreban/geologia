@@ -26,42 +26,12 @@ pub struct GeminiApiError {
 
 impl core::fmt::Display for GeminiApiError {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Gemini API Error {} - {}", self.error.code, self.error.message)
+        write!(
+            f,
+            "Gemini API Error {} - {}",
+            self.error.code, self.error.message
+        )
     }
 }
 
 impl std::error::Error for GeminiApiError {}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Link {
-    pub description: String,
-    pub url: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(tag = "@type")]
-pub enum ErrorType {
-    #[serde(rename = "type.googleapis.com/google.rpc.ErrorInfo")]
-    ErrorInfo { metadata: ErrorInfoMetadata },
-
-    #[serde(rename = "type.googleapis.com/google.rpc.Help")]
-    Help { links: Vec<Link> },
-
-    #[serde(rename = "type.googleapis.com/google.rpc.BadRequest")]
-    BadRequest {
-        #[serde(rename = "fieldViolations")]
-        field_violations: Vec<FieldViolation>,
-    },
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ErrorInfoMetadata {
-    pub service: String,
-    pub consumer: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct FieldViolation {
-    pub field: String,
-    pub description: String,
-}

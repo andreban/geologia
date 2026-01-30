@@ -6,8 +6,6 @@ use tokio_stream::{Stream, StreamExt};
 use tokio_util::codec::LinesCodecError;
 use tracing::error;
 
-pub static AUTH_SCOPE: &[&str] = &["https://www.googleapis.com/auth/cloud-platform"];
-
 #[derive(Clone, Debug)]
 pub struct GeminiClient {
     client: reqwest::Client,

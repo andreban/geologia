@@ -34,7 +34,7 @@ impl Display for Error {
                 write!(f, "No candidates returned for the prompt")
             }
             Error::EventSourceError(e) => {
-                write!(f, "EventSourrce Error: {e}")
+                write!(f, "EventSource Error: {e}")
             }
             Error::EventSourceClosedError => {
                 write!(f, "EventSource closed error")
