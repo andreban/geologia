@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::error::{Error, Result};
+
 use super::Content;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,12 +40,22 @@ impl CountTokensRequestBuilder {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum CountTokensResponse {
-    #[serde(rename_all = "camelCase")]
-    Ok {
-        total_tokens: i32,
-        total_billable_characters: u32,
-    },
-    Error {
-        error: super::VertexApiError,
-    },
+    Ok(CountTokensResponseResult),
+    Error { error: super::VertexApiError },
+}
+
+impl CountTokensResponse {
+    pub fn into_result(self) -> Result<CountTokensResponseResult> {
+        match self {
+            CountTokensResponse::Ok(result) => Ok(result),
+            CountTokensResponse::Error { error } => Err(Error::VertexError(error)),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CountTokensResponseResult {
+    pub total_tokens: i32,
+    pub total_billable_characters: u32,
 }

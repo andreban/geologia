@@ -98,7 +98,7 @@ impl GeminiClient {
         &self,
         request: &TextEmbeddingRequest,
         model: &str,
-    ) -> GeminiResult<TextEmbeddingResponse> {
+    ) -> GeminiResult<TextEmbeddingResponseOk> {
         let endpoint_url =
             format!("https://generativelanguage.googleapis.com/v1beta/models/{model}:predict");
         let resp = self
@@ -108,16 +108,37 @@ impl GeminiClient {
             .json(&request)
             .send()
             .await?;
+
+        let status = resp.status();
         let txt_json = resp.text().await?;
         tracing::debug!("text_embeddings response: {:?}", txt_json);
-        Ok(serde_json::from_str::<TextEmbeddingResponse>(&txt_json)?)
+
+        if !status.is_success() {
+            if let Ok(gemini_error) =
+                serde_json::from_str::<crate::types::GeminiApiError>(&txt_json)
+            {
+                return Err(GeminiError::GeminiError(gemini_error));
+            }
+            return Err(GeminiError::GenericApiError {
+                status: status.as_u16(),
+                body: txt_json,
+            });
+        }
+
+        match serde_json::from_str::<TextEmbeddingResponse>(&txt_json) {
+            Ok(response) => Ok(response.into_result()?),
+            Err(e) => {
+                error!(response = txt_json, error = ?e, "Failed to parse response");
+                Err(e.into())
+            }
+        }
     }
 
     pub async fn count_tokens(
         &self,
         request: &CountTokensRequest,
         model: &str,
-    ) -> GeminiResult<CountTokensResponse> {
+    ) -> GeminiResult<CountTokensResponseResult> {
         let endpoint_url =
             format!("https://generativelanguage.googleapis.com/v1beta/models/{model}:countTokens");
         let resp = self
@@ -128,9 +149,29 @@ impl GeminiClient {
             .send()
             .await?;
 
+        let status = resp.status();
         let txt_json = resp.text().await?;
         tracing::debug!("count_tokens response: {:?}", txt_json);
-        Ok(serde_json::from_str(&txt_json)?)
+
+        if !status.is_success() {
+            if let Ok(gemini_error) =
+                serde_json::from_str::<crate::types::GeminiApiError>(&txt_json)
+            {
+                return Err(GeminiError::GeminiError(gemini_error));
+            }
+            return Err(GeminiError::GenericApiError {
+                status: status.as_u16(),
+                body: txt_json,
+            });
+        }
+
+        match serde_json::from_str::<CountTokensResponse>(&txt_json) {
+            Ok(response) => Ok(response.into_result()?),
+            Err(e) => {
+                error!(response = txt_json, error = ?e, "Failed to parse response");
+                Err(e.into())
+            }
+        }
     }
 
     pub async fn predict_image(
