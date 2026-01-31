@@ -73,7 +73,12 @@ impl Decoder for ServerSentEventsCodec {
             self.next.event = Some(line);
         } else if line.starts_with(DATA) {
             line.drain(..DATA.len());
-            self.next.data = Some(line)
+            if let Some(ref mut existing) = self.next.data {
+                existing.push('\n');
+                existing.push_str(&line);
+            } else {
+                self.next.data = Some(line);
+            }
         } else if line.starts_with(ID) {
             line.drain(..ID.len());
             self.next.id = Some(line);
