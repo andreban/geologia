@@ -1,3 +1,11 @@
+//! Server-Sent Events (SSE) decoder for streaming HTTP responses.
+//!
+//! Implements a [`tokio_util::codec::Decoder`] that parses an SSE byte stream into
+//! [`ServerSentEvent`] values. Used internally by [`GeminiClient::stream_generate_content`]
+//! to process chunked model responses.
+//!
+//! [`GeminiClient::stream_generate_content`]: crate::prelude::GeminiClient::stream_generate_content
+
 use reqwest::Response;
 use std::mem;
 use tokio_stream::{Stream, StreamExt};
@@ -12,7 +20,9 @@ static DATA: &str = "data: ";
 static ID: &str = "id: ";
 static RETRY: &str = "retry: ";
 
+/// Extension trait for converting an HTTP response into a stream of [`ServerSentEvent`]s.
 pub trait EventSource {
+    /// Consumes the response and returns a stream of parsed SSE events.
     fn event_stream(self) -> impl Stream<Item = Result<ServerSentEvent, LinesCodecError>>;
 }
 
@@ -22,14 +32,25 @@ impl EventSource for Response {
     }
 }
 
+/// A parsed Server-Sent Event.
+///
+/// Fields correspond to the standard SSE fields: `event`, `data`, `id`, and `retry`.
+/// Multiple `data:` lines within a single event are concatenated with newline separators.
 #[derive(Debug, Default, Clone)]
 pub struct ServerSentEvent {
+    /// The event type (from the `event:` field).
     pub event: Option<String>,
+    /// The event payload (from one or more `data:` fields, joined by `\n`).
     pub data: Option<String>,
+    /// The event ID (from the `id:` field).
     pub id: Option<String>,
+    /// The reconnection time in milliseconds (from the `retry:` field).
     pub retry: Option<usize>,
 }
 
+/// A [`Decoder`] that parses a byte stream of SSE-formatted data into [`ServerSentEvent`]s.
+///
+/// Wraps a [`LinesCodec`] and accumulates fields until an empty line signals the end of an event.
 pub struct ServerSentEventsCodec {
     lines_code: LinesCodec,
     next: ServerSentEvent,
@@ -42,6 +63,7 @@ impl Default for ServerSentEventsCodec {
 }
 
 impl ServerSentEventsCodec {
+    /// Creates a new SSE codec.
     pub fn new() -> Self {
         Self {
             lines_code: LinesCodec::new(),
@@ -95,6 +117,9 @@ impl Decoder for ServerSentEventsCodec {
     }
 }
 
+/// Converts a [`Response`] into a stream of [`ServerSentEvent`]s.
+///
+/// The response body is read as a byte stream and decoded using [`ServerSentEventsCodec`].
 pub fn stream_response(
     response: Response,
 ) -> impl Stream<Item = Result<ServerSentEvent, LinesCodecError>> {

@@ -2,12 +2,14 @@ use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
 
+/// Request body for the Imagen image generation `predict` endpoint.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PredictImageRequest {
     pub instances: Vec<PredictImageRequestPrompt>,
     pub parameters: PredictImageRequestParameters,
 }
 
+/// A text prompt instance for image generation.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PredictImageRequestPrompt {
     /// The text prompt for the image.
@@ -20,6 +22,7 @@ pub struct PredictImageRequestPrompt {
     pub prompt: String,
 }
 
+/// Parameters controlling image generation behavior.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PredictImageRequestParameters {
@@ -139,6 +142,7 @@ pub struct PredictImageRequestParameters {
     pub storage_uri: Option<String>,
 }
 
+/// Output format options for generated images.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PredictImageRequestParametersOutputOptions {
@@ -155,11 +159,13 @@ pub struct PredictImageRequestParametersOutputOptions {
     pub compression_quality: Option<i32>,
 }
 
+/// A successful response from the Imagen `predict` endpoint.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PredictImageResponse {
     pub predictions: Vec<PredictImageResponsePrediction>,
 }
 
+/// A single generated image from the prediction response.
 #[serde_as]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -169,6 +175,7 @@ pub struct PredictImageResponsePrediction {
     pub mime_type: String,
 }
 
+/// Controls whether generated images may include people.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PersonGeneration {
@@ -177,6 +184,7 @@ pub enum PersonGeneration {
     AllowAll,
 }
 
+/// Safety filter level for image generation.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PredictImageSafetySetting {

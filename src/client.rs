@@ -6,6 +6,26 @@ use tokio_stream::{Stream, StreamExt};
 use tokio_util::codec::LinesCodecError;
 use tracing::error;
 
+/// Async client for the Google Gemini API.
+///
+/// Provides methods for content generation, streaming, token counting, text embeddings,
+/// and image prediction. All requests are authenticated with an API key passed at
+/// construction time.
+///
+/// # Example
+///
+/// ```no_run
+/// use google_genai::prelude::*;
+///
+/// # async fn run() -> google_genai::error::Result<()> {
+/// let client = GeminiClient::new("YOUR_API_KEY".into());
+/// let request = GenerateContentRequest::builder()
+///     .contents(vec![Content::builder().add_text_part("Hi!").build()])
+///     .build();
+/// let response = client.generate_content(&request, "gemini-2.0-flash").await?;
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Clone, Debug)]
 pub struct GeminiClient {
     client: reqwest::Client,
@@ -13,6 +33,7 @@ pub struct GeminiClient {
 }
 
 impl GeminiClient {
+    /// Creates a new [`GeminiClient`] with the given API key.
     pub fn new(api_key: String) -> Self {
         GeminiClient {
             client: reqwest::Client::new(),
@@ -20,6 +41,10 @@ impl GeminiClient {
         }
     }
 
+    /// Sends a content generation request and returns a stream of response chunks via SSE.
+    ///
+    /// Each item in the stream is a [`GenerateContentResponseResult`] containing one or more
+    /// candidates. Useful for displaying incremental output as it is generated.
     pub async fn stream_generate_content(
         &self,
         request: &GenerateContentRequest,
@@ -52,6 +77,9 @@ impl GeminiClient {
         )
     }
 
+    /// Sends a content generation request and returns the complete response.
+    ///
+    /// For streaming responses, use [`stream_generate_content`](Self::stream_generate_content).
     pub async fn generate_content(
         &self,
         request: &GenerateContentRequest,
@@ -94,6 +122,7 @@ impl GeminiClient {
         }
     }
 
+    /// Generates text embeddings for the given input.
     pub async fn text_embeddings(
         &self,
         request: &TextEmbeddingRequest,
@@ -134,6 +163,7 @@ impl GeminiClient {
         }
     }
 
+    /// Counts the number of tokens in the given content.
     pub async fn count_tokens(
         &self,
         request: &CountTokensRequest,
@@ -174,6 +204,7 @@ impl GeminiClient {
         }
     }
 
+    /// Generates images from a text prompt using an Imagen model.
     pub async fn predict_image(
         &self,
         request: &PredictImageRequest,

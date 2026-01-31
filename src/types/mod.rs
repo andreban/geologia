@@ -1,3 +1,5 @@
+//! Request and response types for the Gemini API.
+
 mod common;
 mod count_tokens;
 mod error;

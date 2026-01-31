@@ -5,13 +5,21 @@ use serde_json::Value;
 
 use crate::types::FunctionResponse;
 
+/// A conversation message containing one or more [`Part`]s.
+///
+/// See <https://ai.google.dev/api/caching#Content>.
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct Content {
+    /// The role of the message author (`user` or `model`).
     pub role: Option<Role>,
+    /// The ordered parts that make up this message.
     pub parts: Option<Vec<Part>>,
 }
 
 impl Content {
+    /// Concatenates all [`PartData::Text`] parts into a single string.
+    ///
+    /// Returns `None` if there are no parts.
     pub fn get_text(&self) -> Option<String> {
         self.parts.as_ref().map(|parts| {
             parts
@@ -24,25 +32,30 @@ impl Content {
         })
     }
 
+    /// Creates a [`Content`] containing a single text part, suitable for use as a system instruction.
     pub fn system_prompt<S: Into<String>>(system_prompt: S) -> Self {
         Self::builder().add_text_part(system_prompt).build()
     }
 
+    /// Returns a new [`ContentBuilder`].
     pub fn builder() -> ContentBuilder {
         ContentBuilder::default()
     }
 }
 
+/// Builder for constructing [`Content`] values incrementally.
 #[derive(Clone, Debug, Default)]
 pub struct ContentBuilder {
     content: Content,
 }
 
 impl ContentBuilder {
+    /// Appends a text part to this content.
     pub fn add_text_part<T: Into<String>>(self, text: T) -> Self {
         self.add_part(Part::from_text(text.into()))
     }
 
+    /// Appends an arbitrary [`Part`] to this content.
     pub fn add_part(mut self, part: Part) -> Self {
         match &mut self.content.parts {
             Some(parts) => parts.push(part),
@@ -51,16 +64,19 @@ impl ContentBuilder {
         self
     }
 
+    /// Sets the [`Role`] for this content.
     pub fn role(mut self, role: Role) -> Self {
         self.content.role = Some(role);
         self
     }
 
+    /// Consumes the builder and returns the constructed [`Content`].
     pub fn build(self) -> Content {
         self.content
     }
 }
 
+/// The role of a message author in a conversation.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
@@ -90,7 +106,9 @@ impl FromStr for Role {
     }
 }
 
-/// See https://ai.google.dev/api/caching#Part
+/// A single unit of content within a [`Content`] message.
+///
+/// See <https://ai.google.dev/api/caching#Part>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Part {
@@ -108,29 +126,42 @@ pub struct Part {
     pub data: PartData, // Create enum for data.
 }
 
+/// The payload of a [`Part`], representing different content types.
+///
+/// See <https://ai.google.dev/api/caching#Part>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum PartData {
+    /// Plain text content.
     Text(String),
-    // https://ai.google.dev/api/caching#Blob
+    /// Binary data encoded inline. See <https://ai.google.dev/api/caching#Blob>.
     InlineData {
+        /// The IANA MIME type of the data (e.g. `"image/png"`).
         mime_type: String,
+        /// Base64-encoded binary data.
         data: String,
     },
-    // https://ai.google.dev/api/caching#FunctionCall
+    /// A function call requested by the model. See <https://ai.google.dev/api/caching#FunctionCall>.
     FunctionCall {
+        /// Optional unique identifier for the function call.
         id: Option<String>,
+        /// The name of the function to call.
         name: String,
+        /// The arguments to pass, as a JSON object.
         args: Option<Value>,
     },
-    // https://ai.google.dev/api/caching#FunctionResponse
+    /// A response to a function call. See <https://ai.google.dev/api/caching#FunctionResponse>.
     FunctionResponse(FunctionResponse),
+    /// A reference to a file stored in the API.
     FileData(Value),
+    /// Code to be executed by the model.
     ExecutableCode(Value),
+    /// The result of executing code.
     CodeExecutionResult(Value),
 }
 
 impl Part {
+    /// Creates a [`Part`] containing only text.
     pub fn from_text<S: Into<String>>(text: S) -> Self {
         Self {
             thought: None,

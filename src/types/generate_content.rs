@@ -4,6 +4,11 @@ use serde_json::Value;
 use super::{Content, VertexApiError};
 use crate::error::Result;
 
+/// Request body for the `generateContent` and `streamGenerateContent` endpoints.
+///
+/// Use [`GenerateContentRequest::builder`] for ergonomic construction.
+///
+/// See <https://ai.google.dev/api/generate-content#request-body>.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateContentRequest {
@@ -19,11 +24,13 @@ pub struct GenerateContentRequest {
 }
 
 impl GenerateContentRequest {
+    /// Returns a new [`GenerateContentRequestBuilder`].
     pub fn builder() -> GenerateContentRequestBuilder {
         GenerateContentRequestBuilder::new()
     }
 }
 
+/// Builder for [`GenerateContentRequest`].
 #[derive(Debug)]
 pub struct GenerateContentRequestBuilder {
     request: GenerateContentRequest,
@@ -36,36 +43,45 @@ impl GenerateContentRequestBuilder {
         }
     }
 
+    /// Sets the conversation contents.
     pub fn contents(mut self, contents: Vec<Content>) -> Self {
         self.request.contents = contents;
         self
     }
 
+    /// Sets the generation configuration.
     pub fn generation_config(mut self, generation_config: GenerationConfig) -> Self {
         self.request.generation_config = Some(generation_config);
         self
     }
 
+    /// Sets the tools available to the model (e.g. function calling, Google Search).
     pub fn tools(mut self, tools: Vec<Tools>) -> Self {
         self.request.tools = Some(tools);
         self
     }
 
+    /// Sets the safety filter settings.
     pub fn safety_settings(mut self, safety_settings: Vec<SafetySetting>) -> Self {
         self.request.safety_settings = Some(safety_settings);
         self
     }
 
+    /// Sets a system instruction to guide the model's behavior.
     pub fn system_instruction(mut self, system_instruction: Content) -> Self {
         self.request.system_instruction = Some(system_instruction);
         self
     }
 
+    /// Consumes the builder and returns the constructed [`GenerateContentRequest`].
     pub fn build(self) -> GenerateContentRequest {
         self.request
     }
 }
 
+/// A set of tool declarations the model may use during generation.
+///
+/// See <https://ai.google.dev/api/caching#Tool>.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Tools {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -79,13 +95,17 @@ pub struct Tools {
     pub google_search: Option<GoogleSearch>,
 }
 
+/// Enables the Google Search grounding tool (no configuration required).
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct GoogleSearch {}
 
+/// Configuration for dynamic retrieval in Google Search grounding.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DynamicRetrievalConfig {
+    /// The retrieval mode (e.g. `"MODE_DYNAMIC"`).
     pub mode: String,
+    /// The threshold for triggering retrieval. Defaults to `0.7`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dynamic_threshold: Option<f32>,
 }
@@ -99,12 +119,19 @@ impl Default for DynamicRetrievalConfig {
     }
 }
 
+/// Google Search retrieval tool with dynamic retrieval configuration.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GoogleSearchRetrieval {
+    /// Configuration controlling when retrieval is triggered.
     pub dynamic_retrieval_config: DynamicRetrievalConfig,
 }
 
+/// Parameters that control how the model generates content.
+///
+/// Use [`GenerationConfig::builder`] for ergonomic construction.
+///
+/// See <https://ai.google.dev/api/generate-content#generationconfig>.
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerationConfig {
@@ -129,11 +156,13 @@ pub struct GenerationConfig {
 }
 
 impl GenerationConfig {
+    /// Returns a new [`GenerationConfigBuilder`].
     pub fn builder() -> GenerationConfigBuilder {
         GenerationConfigBuilder::new()
     }
 }
 
+/// Builder for [`GenerationConfig`].
 #[derive(Debug)]
 pub struct GenerationConfigBuilder {
     generation_config: GenerationConfig,
@@ -191,11 +220,13 @@ impl GenerationConfigBuilder {
         self
     }
 
+    /// Consumes the builder and returns the constructed [`GenerationConfig`].
     pub fn build(self) -> GenerationConfig {
         self.generation_config
     }
 }
 
+/// Configuration for the model's "thinking" (chain-of-thought) behavior.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ThinkingConfig {
@@ -206,6 +237,7 @@ pub struct ThinkingConfig {
     pub thinking_level: Option<ThinkingLevel>,
 }
 
+/// The level of thinking effort the model should use.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ThinkingLevel {
@@ -214,6 +246,9 @@ pub enum ThinkingLevel {
     High,
 }
 
+/// A safety filter configuration that controls blocking thresholds for harmful content.
+///
+/// See <https://ai.google.dev/api/generate-content#safetysetting>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SafetySetting {
@@ -223,6 +258,9 @@ pub struct SafetySetting {
     pub method: Option<HarmBlockMethod>,
 }
 
+/// Categories of potentially harmful content.
+///
+/// See <https://ai.google.dev/api/generate-content#harmcategory>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum HarmCategory {
     #[serde(rename = "HARM_CATEGORY_UNSPECIFIED")]
@@ -237,6 +275,7 @@ pub enum HarmCategory {
     SexuallyExplicit,
 }
 
+/// The threshold at which harmful content is blocked.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum HarmBlockThreshold {
     #[serde(rename = "HARM_BLOCK_THRESHOLD_UNSPECIFIED")]
@@ -251,6 +290,7 @@ pub enum HarmBlockThreshold {
     BlockNone,
 }
 
+/// The method used to evaluate harm (severity-based or probability-based).
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum HarmBlockMethod {
     #[serde(rename = "HARM_BLOCK_METHOD_UNSPECIFIED")]
@@ -261,6 +301,9 @@ pub enum HarmBlockMethod {
     Probability, // PROBABILITY
 }
 
+/// A single candidate response generated by the model.
+///
+/// See <https://ai.google.dev/api/generate-content#candidate>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Candidate {
@@ -276,6 +319,7 @@ pub struct Candidate {
 }
 
 impl Candidate {
+    /// Returns the concatenated text from this candidate's content, if any.
     pub fn get_text(&self) -> Option<String> {
         match &self.content {
             Some(content) => content.get_text(),
@@ -284,6 +328,7 @@ impl Candidate {
     }
 }
 
+/// A citation to a source used by the model in its response.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Citation {
@@ -292,12 +337,14 @@ pub struct Citation {
     pub uri: Option<String>,
 }
 
+/// Metadata containing citations for a candidate's content.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CitationMetadata {
     #[serde(alias = "citationSources")]
     pub citations: Vec<Citation>,
 }
 
+/// A safety rating for a piece of content across a specific harm category.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SafetyRating {
@@ -308,6 +355,7 @@ pub struct SafetyRating {
     pub severity_score: Option<f32>,
 }
 
+/// Token usage statistics for a generate content request/response.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageMetadata {
@@ -316,6 +364,9 @@ pub struct UsageMetadata {
     pub total_token_count: Option<u32>,
 }
 
+/// A declaration of a function the model may call.
+///
+/// See <https://ai.google.dev/api/caching#FunctionDeclaration>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FunctionDeclaration {
@@ -332,7 +383,7 @@ pub struct FunctionDeclaration {
     pub response_json_schema: Option<Value>,
 }
 
-/// See https://ai.google.dev/api/caching#FunctionResponse
+/// See <https://ai.google.dev/api/caching#FunctionResponse>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FunctionResponse {
@@ -345,14 +396,14 @@ pub struct FunctionResponse {
     pub scheduling: Option<Scheduling>,
 }
 
-/// See https://ai.google.dev/api/caching#FunctionResponsePart
+/// See <https://ai.google.dev/api/caching#FunctionResponsePart>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FunctionResponsePart {
     InlineData(FunctionResponseBlob),
 }
 
-/// See https://ai.google.dev/api/caching#FunctionResponseBlob
+/// See <https://ai.google.dev/api/caching#FunctionResponseBlob>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FunctionResponseBlob {
@@ -360,7 +411,7 @@ pub struct FunctionResponseBlob {
     pub data: String,
 }
 
-/// See https://ai.google.dev/api/caching#Scheduling
+/// See <https://ai.google.dev/api/caching#Scheduling>.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Scheduling {
@@ -370,6 +421,7 @@ pub enum Scheduling {
     Interrupt,
 }
 
+/// A single property within a function's parameter schema.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FunctionParametersProperty {
@@ -377,6 +429,10 @@ pub struct FunctionParametersProperty {
     pub description: String,
 }
 
+/// The raw response from the `generateContent` endpoint, which may be a success or an error.
+///
+/// Use [`into_result`](GenerateContentResponse::into_result) to convert into a standard
+/// `Result<GenerateContentResponseResult>`.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum GenerateContentResponse {
@@ -393,6 +449,7 @@ impl From<GenerateContentResponse> for Result<GenerateContentResponseResult> {
     }
 }
 
+/// A successful response from the `generateContent` endpoint.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenerateContentResponseResult {
@@ -400,12 +457,14 @@ pub struct GenerateContentResponseResult {
     pub usage_metadata: Option<UsageMetadata>,
 }
 
+/// An error response from the `generateContent` endpoint.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GenerateContentResponseError {
     pub error: VertexApiError,
 }
 
 impl GenerateContentResponse {
+    /// Converts this response into a `Result`, mapping the error variant to [`crate::error::Error`].
     pub fn into_result(self) -> Result<GenerateContentResponseResult> {
         match self {
             GenerateContentResponse::Ok(result) => Ok(result),
