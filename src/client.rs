@@ -1,3 +1,6 @@
+// Copyright 2026 Andre Cipriani Bandarra
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::error::{Error as GeminiError, Result as GeminiResult};
 use crate::network::event_source::{EventSource, ServerSentEvent};
 use crate::prelude::*;

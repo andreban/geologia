@@ -1,3 +1,6 @@
+// Copyright 2026 Andre Cipriani Bandarra
+// SPDX-License-Identifier: Apache-2.0
+
 use std::{fmt::Display, str::FromStr, vec};
 
 use serde::{Deserialize, Serialize};
