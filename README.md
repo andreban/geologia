@@ -68,3 +68,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE).

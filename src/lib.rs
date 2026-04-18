@@ -1,3 +1,6 @@
+// Copyright 2026 Andre Cipriani Bandarra
+// SPDX-License-Identifier: Apache-2.0
+
 //! Async Rust client for the Google Gemini API.
 //!
 //! This crate provides a high-level async client for interacting with Google's Gemini

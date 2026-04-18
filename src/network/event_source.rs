@@ -1,3 +1,6 @@
+// Copyright 2026 Andre Cipriani Bandarra
+// SPDX-License-Identifier: Apache-2.0
+
 //! Server-Sent Events (SSE) decoder for streaming HTTP responses.
 //!
 //! Implements a [`tokio_util::codec::Decoder`] that parses an SSE byte stream into
