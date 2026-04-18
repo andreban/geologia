@@ -15,9 +15,9 @@ use tracing::error;
 /// # Example
 ///
 /// ```no_run
-/// use google_genai::prelude::*;
+/// use geologia::prelude::*;
 ///
-/// # async fn run() -> google_genai::error::Result<()> {
+/// # async fn run() -> geologia::error::Result<()> {
 /// let client = GeminiClient::new("YOUR_API_KEY".into());
 /// let request = GenerateContentRequest::builder()
 ///     .contents(vec![Content::builder().add_text_part("Hi!").build()])

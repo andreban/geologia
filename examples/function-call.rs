@@ -1,6 +1,6 @@
 use std::{env, error::Error};
 
-use google_genai::prelude::{
+use geologia::prelude::{
     Content, FunctionDeclaration, FunctionResponse, GeminiClient, GenerateContentRequest, Part,
     PartData, Role, Tools,
 };
