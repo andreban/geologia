@@ -7,9 +7,9 @@
 //! # Usage
 //!
 //! ```no_run
-//! use google_genai::prelude::*;
+//! use geologia::prelude::*;
 //!
-//! # async fn run() -> google_genai::error::Result<()> {
+//! # async fn run() -> geologia::error::Result<()> {
 //! let client = GeminiClient::new("YOUR_API_KEY".into());
 //!
 //! let request = GenerateContentRequest::builder()
@@ -30,7 +30,7 @@ mod types;
 
 /// Convenience re-exports of the most commonly used types.
 ///
-/// Importing `use google_genai::prelude::*` brings [`GeminiClient`](crate::prelude::GeminiClient)
+/// Importing `use geologia::prelude::*` brings [`GeminiClient`](crate::prelude::GeminiClient)
 /// and all request/response types into scope.
 pub mod prelude {
     pub use crate::client::*;

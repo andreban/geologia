@@ -1,6 +1,6 @@
 use std::env;
 
-use google_genai::{
+use geologia::{
     network::event_source::EventSource,
     prelude::{Content, GenerateContentRequest, Role},
 };

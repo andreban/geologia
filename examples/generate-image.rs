@@ -1,6 +1,6 @@
 use std::{env, error::Error, io::Cursor};
 
-use google_genai::prelude::{
+use geologia::prelude::{
     GeminiClient, PersonGeneration, PredictImageRequest, PredictImageRequestParameters,
     PredictImageRequestParametersOutputOptions, PredictImageRequestPrompt,
     PredictImageSafetySetting,

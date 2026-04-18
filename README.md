@@ -1,4 +1,4 @@
-# google-genai
+# geologia
 
 A Rust client library for the Google Generative AI API.
 
@@ -30,14 +30,14 @@ To use this library in your own Rust application, add it as a dependency in your
 
 ```toml
 [dependencies]
-google-genai = "0.1.0" # Or the latest version
+geologia = "0.1.0" # Or the latest version
 ```
 
 Here is a basic example of how to use the `GeminiClient` to generate content:
 
 ```rust
 use std::env;
-use google_genai::prelude::{Content, GeminiClient, GenerateContentRequest, Role};
+use geologia::prelude::{Content, GeminiClient, GenerateContentRequest, Role};
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // Get the API key from the environment.

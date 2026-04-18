@@ -1,6 +1,6 @@
 use std::{env, error::Error};
 
-use google_genai::prelude::{Content, GeminiClient, GenerateContentRequest, Role};
+use geologia::prelude::{Content, GeminiClient, GenerateContentRequest, Role};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
