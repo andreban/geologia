@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let request = GenerateContentRequest::builder().contents(prompt).build();
     let mut response_stream = gemini_client
-        .stream_generate_content(&request, "gemini-3-pro-preview")
+        .stream_generate_content(&request, "gemini-3.1-flash-lite")
         .await?;
 
     while let Some(content) = response_stream.next().await {
