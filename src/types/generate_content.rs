@@ -359,12 +359,77 @@ pub struct SafetyRating {
 }
 
 /// Token usage statistics for a generate content request/response.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+///
+/// See <https://ai.google.dev/api/generate-content#UsageMetadata>.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageMetadata {
-    pub candidates_token_count: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_token_count: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_content_token_count: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub candidates_token_count: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_use_prompt_token_count: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thoughts_token_count: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_token_count: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_tokens_details: Option<Vec<ModalityTokenCount>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_tokens_details: Option<Vec<ModalityTokenCount>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub candidates_tokens_details: Option<Vec<ModalityTokenCount>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_use_prompt_tokens_details: Option<Vec<ModalityTokenCount>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub service_tier: Option<ServiceTier>,
+}
+
+/// A breakdown of tokens by [`Modality`].
+///
+/// See <https://ai.google.dev/api/generate-content#ModalityTokenCount>.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModalityTokenCount {
+    pub modality: Modality,
+    pub token_count: u32,
+}
+
+/// Content modality reported in [`ModalityTokenCount`].
+///
+/// See <https://ai.google.dev/api/generate-content#Modality>.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum Modality {
+    #[serde(rename = "MODALITY_UNSPECIFIED")]
+    Unspecified,
+    #[serde(rename = "TEXT")]
+    Text,
+    #[serde(rename = "IMAGE")]
+    Image,
+    #[serde(rename = "VIDEO")]
+    Video,
+    #[serde(rename = "AUDIO")]
+    Audio,
+    #[serde(rename = "DOCUMENT")]
+    Document,
+}
+
+/// The pricing/performance tier used to serve a request.
+///
+/// See <https://ai.google.dev/api/generate-content#ServiceTier>.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ServiceTier {
+    #[serde(rename = "unspecified")]
+    Unspecified,
+    #[serde(rename = "flex")]
+    Flex,
+    #[serde(rename = "standard")]
+    Standard,
+    #[serde(rename = "priority")]
+    Priority,
 }
 
 /// A declaration of a function the model may call.
@@ -478,7 +543,7 @@ impl GenerateContentResponse {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::{Candidate, UsageMetadata};
+    use crate::types::{Candidate, Modality, ServiceTier, UsageMetadata};
 
     use super::GenerateContentResponseResult;
 
@@ -497,7 +562,127 @@ mod tests {
           ],
           "thoughtsTokenCount": 828
         }"#;
-        let _ = serde_json::from_str::<UsageMetadata>(input).unwrap();
+        let usage: UsageMetadata = serde_json::from_str(input).unwrap();
+        assert_eq!(usage.prompt_token_count, Some(11));
+        assert_eq!(usage.candidates_token_count, Some(202));
+        assert_eq!(usage.total_token_count, Some(1041));
+        assert_eq!(usage.thoughts_token_count, Some(828));
+        let prompt_details = usage.prompt_tokens_details.expect("promptTokensDetails");
+        assert_eq!(prompt_details.len(), 1);
+        assert_eq!(prompt_details[0].modality, Modality::Text);
+        assert_eq!(prompt_details[0].token_count, 11);
+    }
+
+    #[test]
+    pub fn parses_usage_metadata_full() {
+        let input = r#"
+        {
+          "promptTokenCount": 100,
+          "cachedContentTokenCount": 40,
+          "candidatesTokenCount": 50,
+          "toolUsePromptTokenCount": 7,
+          "thoughtsTokenCount": 200,
+          "totalTokenCount": 357,
+          "promptTokensDetails": [
+            { "modality": "TEXT", "tokenCount": 80 },
+            { "modality": "IMAGE", "tokenCount": 20 }
+          ],
+          "cacheTokensDetails": [
+            { "modality": "TEXT", "tokenCount": 40 }
+          ],
+          "candidatesTokensDetails": [
+            { "modality": "TEXT", "tokenCount": 50 }
+          ],
+          "toolUsePromptTokensDetails": [
+            { "modality": "TEXT", "tokenCount": 7 }
+          ],
+          "serviceTier": "standard"
+        }"#;
+        let usage: UsageMetadata = serde_json::from_str(input).unwrap();
+        assert_eq!(usage.prompt_token_count, Some(100));
+        assert_eq!(usage.cached_content_token_count, Some(40));
+        assert_eq!(usage.candidates_token_count, Some(50));
+        assert_eq!(usage.tool_use_prompt_token_count, Some(7));
+        assert_eq!(usage.thoughts_token_count, Some(200));
+        assert_eq!(usage.total_token_count, Some(357));
+        assert_eq!(usage.service_tier, Some(ServiceTier::Standard));
+
+        let prompt_details = usage.prompt_tokens_details.unwrap();
+        assert_eq!(prompt_details.len(), 2);
+        assert_eq!(prompt_details[0].modality, Modality::Text);
+        assert_eq!(prompt_details[0].token_count, 80);
+        assert_eq!(prompt_details[1].modality, Modality::Image);
+        assert_eq!(prompt_details[1].token_count, 20);
+
+        assert_eq!(usage.cache_tokens_details.unwrap()[0].token_count, 40);
+        assert_eq!(usage.candidates_tokens_details.unwrap()[0].token_count, 50);
+        assert_eq!(
+            usage.tool_use_prompt_tokens_details.unwrap()[0].token_count,
+            7
+        );
+    }
+
+    #[test]
+    pub fn parses_minimal_usage_metadata() {
+        let input = r#"{ "totalTokenCount": 12 }"#;
+        let usage: UsageMetadata = serde_json::from_str(input).unwrap();
+        assert_eq!(usage.total_token_count, Some(12));
+        assert!(usage.prompt_token_count.is_none());
+        assert!(usage.cached_content_token_count.is_none());
+        assert!(usage.thoughts_token_count.is_none());
+        assert!(usage.tool_use_prompt_token_count.is_none());
+        assert!(usage.prompt_tokens_details.is_none());
+        assert!(usage.service_tier.is_none());
+    }
+
+    #[test]
+    pub fn skips_none_usage_metadata_fields_on_serialize() {
+        let usage = UsageMetadata {
+            prompt_token_count: Some(5),
+            total_token_count: Some(5),
+            ..Default::default()
+        };
+        let json = serde_json::to_value(&usage).unwrap();
+        let obj = json.as_object().unwrap();
+        assert!(obj.contains_key("promptTokenCount"));
+        assert!(obj.contains_key("totalTokenCount"));
+        assert!(!obj.contains_key("cachedContentTokenCount"));
+        assert!(!obj.contains_key("thoughtsTokenCount"));
+        assert!(!obj.contains_key("toolUsePromptTokenCount"));
+        assert!(!obj.contains_key("promptTokensDetails"));
+        assert!(!obj.contains_key("serviceTier"));
+    }
+
+    #[test]
+    pub fn parses_all_modalities() {
+        let cases = [
+            (r#""MODALITY_UNSPECIFIED""#, Modality::Unspecified),
+            (r#""TEXT""#, Modality::Text),
+            (r#""IMAGE""#, Modality::Image),
+            (r#""VIDEO""#, Modality::Video),
+            (r#""AUDIO""#, Modality::Audio),
+            (r#""DOCUMENT""#, Modality::Document),
+        ];
+        for (input, expected) in cases {
+            let parsed: Modality = serde_json::from_str(input).unwrap();
+            assert_eq!(parsed, expected);
+            assert_eq!(serde_json::to_string(&parsed).unwrap(), input);
+        }
+    }
+
+    #[test]
+    pub fn parses_all_service_tiers() {
+        let cases = [
+            (r#""unspecified""#, ServiceTier::Unspecified),
+            (r#""flex""#, ServiceTier::Flex),
+            (r#""standard""#, ServiceTier::Standard),
+            (r#""priority""#, ServiceTier::Priority),
+        ];
+        for (input, expected) in cases {
+            let parsed: ServiceTier = serde_json::from_str(input).unwrap();
+            assert_eq!(parsed, expected);
+            assert_eq!(serde_json::to_string(&parsed).unwrap(), input);
+        }
     }
 
     #[test]

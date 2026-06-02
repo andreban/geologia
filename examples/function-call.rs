@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .build();
 
     let mut response = gemini_client
-        .generate_content(&request, "gemini-3-pro-preview")
+        .generate_content(&request, "gemini-3.1-flash-lite")
         .await?;
 
     while let Some(candidate) = response.candidates.last()
@@ -110,7 +110,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         println!("{contents:?}");
         response = gemini_client
-            .generate_content(&request, "gemini-3-pro-preview")
+            .generate_content(&request, "gemini-3.1-flash-lite")
             .await?;
     }
 

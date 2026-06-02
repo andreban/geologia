@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let request = GenerateContentRequest::builder().contents(prompt).build();
     let response = gemini_client
-        .generate_content(&request, "gemini-3-pro-preview")
+        .generate_content(&request, "gemini-3.1-flash-lite")
         .await?;
 
     println!("Response: {:?}", response.candidates[0].get_text().unwrap());
