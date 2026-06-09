@@ -64,6 +64,7 @@ impl GeminiClient {
             .json(&request)
             .send()
             .await?
+            .error_for_status()?
             .event_stream()
             .filter_map(Self::parse_event))
     }
@@ -97,7 +98,8 @@ impl GeminiClient {
             .header("x-goog-api-key", &self.api_key)
             .json(&request)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         let status = resp.status();
         let txt_json = resp.text().await?;
@@ -139,7 +141,8 @@ impl GeminiClient {
             .header("x-goog-api-key", &self.api_key)
             .json(&request)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         let status = resp.status();
         let txt_json = resp.text().await?;
@@ -180,7 +183,8 @@ impl GeminiClient {
             .header("x-goog-api-key", &self.api_key)
             .json(&request)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         let status = resp.status();
         let txt_json = resp.text().await?;
@@ -222,7 +226,8 @@ impl GeminiClient {
             .header("x-goog-api-key", &self.api_key)
             .json(&request)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         let status = resp.status();
         let txt_json = resp.text().await?;
