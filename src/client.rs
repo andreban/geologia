@@ -101,22 +101,8 @@ impl GeminiClient {
             .await?
             .error_for_status()?;
 
-        let status = resp.status();
         let txt_json = resp.text().await?;
         tracing::debug!("generate_content response: {:?}", txt_json);
-
-        if !status.is_success() {
-            if let Ok(gemini_error) =
-                serde_json::from_str::<crate::types::GeminiApiError>(&txt_json)
-            {
-                return Err(GeminiError::GeminiError(gemini_error));
-            }
-            // Fallback if parsing fails, though it should ideally match GeminiApiError
-            return Err(GeminiError::GenericApiError {
-                status: status.as_u16(),
-                body: txt_json,
-            });
-        }
 
         match serde_json::from_str::<GenerateContentResponse>(&txt_json) {
             Ok(response) => Ok(response.into_result()?),
@@ -144,21 +130,8 @@ impl GeminiClient {
             .await?
             .error_for_status()?;
 
-        let status = resp.status();
         let txt_json = resp.text().await?;
         tracing::debug!("text_embeddings response: {:?}", txt_json);
-
-        if !status.is_success() {
-            if let Ok(gemini_error) =
-                serde_json::from_str::<crate::types::GeminiApiError>(&txt_json)
-            {
-                return Err(GeminiError::GeminiError(gemini_error));
-            }
-            return Err(GeminiError::GenericApiError {
-                status: status.as_u16(),
-                body: txt_json,
-            });
-        }
 
         match serde_json::from_str::<TextEmbeddingResponse>(&txt_json) {
             Ok(response) => Ok(response.into_result()?),
@@ -186,21 +159,8 @@ impl GeminiClient {
             .await?
             .error_for_status()?;
 
-        let status = resp.status();
         let txt_json = resp.text().await?;
         tracing::debug!("count_tokens response: {:?}", txt_json);
-
-        if !status.is_success() {
-            if let Ok(gemini_error) =
-                serde_json::from_str::<crate::types::GeminiApiError>(&txt_json)
-            {
-                return Err(GeminiError::GeminiError(gemini_error));
-            }
-            return Err(GeminiError::GenericApiError {
-                status: status.as_u16(),
-                body: txt_json,
-            });
-        }
 
         match serde_json::from_str::<CountTokensResponse>(&txt_json) {
             Ok(response) => Ok(response.into_result()?),
@@ -229,20 +189,7 @@ impl GeminiClient {
             .await?
             .error_for_status()?;
 
-        let status = resp.status();
         let txt_json = resp.text().await?;
-
-        if !status.is_success() {
-            if let Ok(gemini_error) =
-                serde_json::from_str::<crate::types::GeminiApiError>(&txt_json)
-            {
-                return Err(GeminiError::GeminiError(gemini_error));
-            }
-            return Err(GeminiError::GenericApiError {
-                status: status.as_u16(),
-                body: txt_json,
-            });
-        }
 
         match serde_json::from_str::<PredictImageResponse>(&txt_json) {
             Ok(response) => Ok(response),
