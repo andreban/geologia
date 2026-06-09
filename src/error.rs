@@ -22,21 +22,12 @@ pub enum Error {
     Serde(serde_json::Error),
     /// A structured error returned by the Vertex AI API.
     VertexError(types::VertexApiError),
-    /// A structured error returned by the Gemini API.
-    GeminiError(types::GeminiApiError),
     /// The API response contained no candidate completions.
     NoCandidatesError,
     /// An error occurred while decoding the SSE event stream.
     EventSourceError(LinesCodecError),
     /// The SSE event stream closed unexpectedly.
     EventSourceClosedError,
-    /// An API error that could not be parsed into a structured error type.
-    GenericApiError {
-        /// The HTTP status code.
-        status: u16,
-        /// The raw response body.
-        body: String,
-    },
 }
 
 impl Display for Error {
@@ -48,9 +39,6 @@ impl Display for Error {
             Error::VertexError(e) => {
                 write!(f, "Vertex error: {e}")
             }
-            Error::GeminiError(e) => {
-                write!(f, "Gemini error: {e}")
-            }
             Error::NoCandidatesError => {
                 write!(f, "No candidates returned for the prompt")
             }
@@ -59,9 +47,6 @@ impl Display for Error {
             }
             Error::EventSourceClosedError => {
                 write!(f, "EventSource closed error")
-            }
-            Error::GenericApiError { status, body } => {
-                write!(f, "API error (status {status}): {body}")
             }
         }
     }
@@ -90,12 +75,6 @@ impl From<serde_json::Error> for Error {
 impl From<types::VertexApiError> for Error {
     fn from(e: types::VertexApiError) -> Self {
         Error::VertexError(e)
-    }
-}
-
-impl From<types::GeminiApiError> for Error {
-    fn from(e: types::GeminiApiError) -> Self {
-        Error::GeminiError(e)
     }
 }
 
