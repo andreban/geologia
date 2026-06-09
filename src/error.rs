@@ -22,6 +22,14 @@ pub enum Error {
     Serde(serde_json::Error),
     /// A structured error returned by the Vertex AI API.
     VertexError(types::VertexApiError),
+    /// An HTTP error status whose response body could not be parsed as a structured
+    /// Gemini error. Carries the status and the raw response body for diagnosis.
+    ApiError {
+        /// The HTTP status code returned by the API.
+        status: reqwest::StatusCode,
+        /// The raw response body.
+        body: String,
+    },
     /// The API response contained no candidate completions.
     NoCandidatesError,
     /// An error occurred while decoding the SSE event stream.
@@ -38,6 +46,9 @@ impl Display for Error {
             Error::Serde(e) => write!(f, "Serde error: {e}"),
             Error::VertexError(e) => {
                 write!(f, "Vertex error: {e}")
+            }
+            Error::ApiError { status, body } => {
+                write!(f, "HTTP error {status}: {body}")
             }
             Error::NoCandidatesError => {
                 write!(f, "No candidates returned for the prompt")
