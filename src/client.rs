@@ -44,6 +44,26 @@ impl GeminiClient {
         }
     }
 
+    /// Returns the response unchanged on a success status, otherwise reads the response
+    /// body and maps it to a structured error.
+    ///
+    /// Unlike [`reqwest::Response::error_for_status`], this consumes the body so the
+    /// provider's error detail (e.g. the Gemini `INVALID_ARGUMENT` message naming the
+    /// offending field) is surfaced to the caller rather than discarded. When the body
+    /// parses as a Gemini error envelope it becomes a [`GeminiError::VertexError`];
+    /// otherwise the raw body is preserved in a [`GeminiError::ApiError`].
+    async fn error_for_status(resp: reqwest::Response) -> GeminiResult<reqwest::Response> {
+        let status = resp.status();
+        if !status.is_client_error() && !status.is_server_error() {
+            return Ok(resp);
+        }
+        let body = resp.text().await?;
+        match serde_json::from_str::<VertexApiErrorResponse>(&body) {
+            Ok(envelope) => Err(GeminiError::VertexError(envelope.error)),
+            Err(_) => Err(GeminiError::ApiError { status, body }),
+        }
+    }
+
     /// Sends a content generation request and returns a stream of response chunks via SSE.
     ///
     /// Each item in the stream is a [`GenerateContentResponseResult`] containing one or more
@@ -58,13 +78,14 @@ impl GeminiClient {
         );
         let client = self.client.clone();
         let request = request.clone();
-        Ok(client
+        let resp = client
             .post(&endpoint_url)
             .header("x-goog-api-key", &self.api_key)
             .json(&request)
             .send()
+            .await?;
+        Ok(Self::error_for_status(resp)
             .await?
-            .error_for_status()?
             .event_stream()
             .filter_map(Self::parse_event))
     }
@@ -98,8 +119,8 @@ impl GeminiClient {
             .header("x-goog-api-key", &self.api_key)
             .json(&request)
             .send()
-            .await?
-            .error_for_status()?;
+            .await?;
+        let resp = Self::error_for_status(resp).await?;
 
         let txt_json = resp.text().await?;
         tracing::debug!("generate_content response: {:?}", txt_json);
@@ -127,8 +148,8 @@ impl GeminiClient {
             .header("x-goog-api-key", &self.api_key)
             .json(&request)
             .send()
-            .await?
-            .error_for_status()?;
+            .await?;
+        let resp = Self::error_for_status(resp).await?;
 
         let txt_json = resp.text().await?;
         tracing::debug!("text_embeddings response: {:?}", txt_json);
@@ -156,8 +177,8 @@ impl GeminiClient {
             .header("x-goog-api-key", &self.api_key)
             .json(&request)
             .send()
-            .await?
-            .error_for_status()?;
+            .await?;
+        let resp = Self::error_for_status(resp).await?;
 
         let txt_json = resp.text().await?;
         tracing::debug!("count_tokens response: {:?}", txt_json);
@@ -186,8 +207,8 @@ impl GeminiClient {
             .header("x-goog-api-key", &self.api_key)
             .json(&request)
             .send()
-            .await?
-            .error_for_status()?;
+            .await?;
+        let resp = Self::error_for_status(resp).await?;
 
         let txt_json = resp.text().await?;
 
