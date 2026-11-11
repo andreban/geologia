@@ -16,7 +16,8 @@ pub const DEFAULT_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1
 ///
 /// Provides methods for model discovery, content generation, streaming, token counting,
 /// text embeddings, image generation, context caching, file management, batch generation
-/// (Batch API), and File Search store management for semantic retrieval. All requests are authenticated with an API key passed at construction time.
+/// (Batch API), File Search store management for semantic retrieval, and structured decision
+/// evaluation (Decisions API). All requests are authenticated with an API key passed at construction time.
 ///
 /// Use [`GeminiClient::builder`] for advanced configuration, such as pointing at a mock
 /// server or sharing a configured [`reqwest::Client`].
@@ -1376,6 +1377,74 @@ impl GeminiClient {
 
         match serde_json::from_str::<Document>(&txt_json) {
             Ok(doc) => Ok(doc),
+            Err(e) => {
+                error!(response = txt_json, error = ?e, "Failed to parse response");
+                Err(e.into())
+            }
+        }
+    }
+
+    /// Evaluates one or more structured decision questions (`noul`, `choice`, or `score`)
+    /// against a shared text or multimodal input context via `POST v1beta/decisions`.
+    ///
+    /// Returns a [`CreateDecisionResponse`] containing calibrated probabilities and
+    /// closed-world confidence scores keyed by question ID.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use geologia::prelude::*;
+    ///
+    /// # async fn run() -> geologia::error::Result<()> {
+    /// let client = GeminiClient::new("YOUR_API_KEY".into());
+    /// let request = CreateDecisionRequest::builder()
+    ///     .model(DEFAULT_DECISION_MODEL)
+    ///     .text_input("Order #42 was delivered 3 days late and the outer box was crushed.")
+    ///     .add_noul_question(
+    ///         "needs_refund_review",
+    ///         NoulQuestion::new("Should this order be routed to the refund specialist team?"),
+    ///     )
+    ///     .add_choice_question(
+    ///         "priority",
+    ///         ChoiceQuestion::new(
+    ///             "What support priority should be assigned?",
+    ///             [
+    ///                 ("low", "General inquiry with no delivery or damage issue"),
+    ///                 ("medium", "Minor delay without package damage"),
+    ///                 ("high", "Late delivery combined with physical package damage"),
+    ///             ],
+    ///         ),
+    ///     )
+    ///     .build();
+    ///
+    /// let response = client.create_decision(&request).await?;
+    /// if let Some(noul) = response.get_noul("needs_refund_review") {
+    ///     println!("P(true) = {}, confidence = {}", noul.noul, noul.confidence);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// See <https://aistudio.google.com/docs/decisions-api>.
+    pub async fn create_decision(
+        &self,
+        request: &CreateDecisionRequest,
+    ) -> GeminiResult<CreateDecisionResponse> {
+        let endpoint_url = self.endpoint_url("decisions");
+        let resp = self
+            .client
+            .post(&endpoint_url)
+            .header("x-goog-api-key", &self.api_key)
+            .json(request)
+            .send()
+            .await?;
+        let resp = Self::error_for_status(resp).await?;
+
+        let txt_json = resp.text().await?;
+        tracing::debug!("create_decision response: {:?}", txt_json);
+
+        match serde_json::from_str::<CreateDecisionResponse>(&txt_json) {
+            Ok(response) => Ok(response),
             Err(e) => {
                 error!(response = txt_json, error = ?e, "Failed to parse response");
                 Err(e.into())
