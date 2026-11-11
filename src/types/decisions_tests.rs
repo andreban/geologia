@@ -1,11 +1,14 @@
 // Copyright 2026 Andre Cipriani Bandarra
 // SPDX-License-Identifier: Apache-2.0
 
-use super::*;
 use serde_json::json;
 
+use super::*;
+
+type Result<T> = core::result::Result<T, Box<dyn std::error::Error>>;
+
 #[test]
-fn serialize_and_deserialize_full_decision_request_and_response() {
+fn serialize_and_deserialize_full_decision_request_and_response() -> Result<()> {
     let request = CreateDecisionRequest::builder()
         .model("gemini-decision-1")
         .text_input("Kitchen counter has a puddle of spilled coffee near the edge.")
@@ -39,7 +42,7 @@ fn serialize_and_deserialize_full_decision_request_and_response() {
         )
         .build();
 
-    let serialized = serde_json::to_value(&request).expect("serialize request");
+    let serialized = serde_json::to_value(&request)?;
     assert_eq!(serialized["model"], "gemini-decision-1");
     assert_eq!(
         serialized["input"],
@@ -72,8 +75,7 @@ fn serialize_and_deserialize_full_decision_request_and_response() {
         ])
     );
 
-    let round_trip: CreateDecisionRequest =
-        serde_json::from_value(serialized).expect("deserialize request");
+    let round_trip: CreateDecisionRequest = serde_json::from_value(serialized)?;
     assert_eq!(round_trip, request);
 
     let response_json = json!({
@@ -119,10 +121,9 @@ fn serialize_and_deserialize_full_decision_request_and_response() {
         }
     });
 
-    let response: CreateDecisionResponse =
-        serde_json::from_value(response_json.clone()).expect("deserialize response");
+    let response: CreateDecisionResponse = serde_json::from_value(response_json.clone())?;
 
-    let noul = response.get_noul("has_spill").expect("has_spill noul");
+    let noul = response.get_noul("has_spill").ok_or("missing has_spill")?;
     assert_eq!(noul.noul, 0.96);
     assert_eq!(noul.confidence, 0.96);
     assert_eq!(
@@ -130,14 +131,14 @@ fn serialize_and_deserialize_full_decision_request_and_response() {
         Some(0.96)
     );
 
-    let choice = response.get_choice("urgency").expect("urgency choice");
+    let choice = response.get_choice("urgency").ok_or("missing urgency")?;
     assert_eq!(choice.choice, "medium");
     assert_eq!(choice.confidence, 0.78);
     assert_eq!(choice.probabilities.get("medium"), Some(&0.78));
 
     let score = response
         .get_score("cleanliness_score")
-        .expect("cleanliness_score score");
+        .ok_or("missing cleanliness_score")?;
     assert_eq!(score.score, 0.85);
     assert_eq!(score.confidence, 0.75);
     assert_eq!(
@@ -145,7 +146,7 @@ fn serialize_and_deserialize_full_decision_request_and_response() {
         Some("Minor crumbs or small spill")
     );
 
-    let usage = response.usage.as_ref().expect("usage present");
+    let usage = response.usage.as_ref().ok_or("missing usage")?;
     assert_eq!(usage.total_input_tokens, Some(120));
     assert_eq!(usage.total_output_tokens, Some(18));
     assert_eq!(usage.total_tokens, Some(138));
@@ -157,12 +158,13 @@ fn serialize_and_deserialize_full_decision_request_and_response() {
         }])
     );
 
-    let reserialized = serde_json::to_value(&response).expect("reserialize response");
+    let reserialized = serde_json::to_value(&response)?;
     assert_eq!(reserialized, response_json);
+    Ok(())
 }
 
 #[test]
-fn multimodal_input_and_structured_instructions_round_trip() {
+fn multimodal_input_and_structured_instructions_round_trip() -> Result<()> {
     let request = CreateDecisionRequest::builder()
         .model("gemini-decision-1")
         .text_input("Inspect the following media items:")
@@ -196,7 +198,7 @@ fn multimodal_input_and_structured_instructions_round_trip() {
         )
         .build();
 
-    let value = serde_json::to_value(&request).expect("serialize multimodal request");
+    let value = serde_json::to_value(&request)?;
     assert_eq!(value["input"][0]["type"], "text");
     assert_eq!(value["input"][1]["type"], "image");
     assert_eq!(value["input"][1]["data"], "cG5nLWJ5dGVz");
@@ -214,13 +216,13 @@ fn multimodal_input_and_structured_instructions_round_trip() {
         })
     );
 
-    let decoded: CreateDecisionRequest =
-        serde_json::from_value(value).expect("deserialize multimodal request");
+    let decoded: CreateDecisionRequest = serde_json::from_value(value)?;
     assert_eq!(decoded, request);
+    Ok(())
 }
 
 #[test]
-fn prompt_feedback_and_annotations_round_trip() {
+fn prompt_feedback_and_annotations_round_trip() -> Result<()> {
     let text_with_annotations = DecisionTextContent::new("Cited statement").with_annotations(vec![
         DecisionAnnotation::UrlCitation(DecisionUrlCitation {
             start_index: Some(0),
@@ -238,11 +240,11 @@ fn prompt_feedback_and_annotations_round_trip() {
     ]);
 
     let content = DecisionInputContent::Text(text_with_annotations);
-    let json_val = serde_json::to_value(&content).expect("serialize annotated text");
+    let json_val = serde_json::to_value(&content)?;
     assert_eq!(json_val["annotations"][0]["type"], "url_citation");
     assert_eq!(json_val["annotations"][1]["type"], "word_info");
-    let parsed_content: DecisionInputContent =
-        serde_json::from_value(json_val).expect("deserialize annotated text");
+
+    let parsed_content: DecisionInputContent = serde_json::from_value(json_val)?;
     assert_eq!(parsed_content, content);
 
     let feedback_resp: CreateDecisionResponse = serde_json::from_value(json!({
@@ -250,8 +252,8 @@ fn prompt_feedback_and_annotations_round_trip() {
             "block_reason": "safety",
             "block_reason_message": "Prompt blocked by safety filter"
         }
-    }))
-    .expect("deserialize prompt_feedback");
+    }))?;
+
     assert_eq!(
         feedback_resp.prompt_feedback,
         Some(DecisionPromptFeedback {
@@ -259,10 +261,11 @@ fn prompt_feedback_and_annotations_round_trip() {
             block_reason_message: Some("Prompt blocked by safety filter".into()),
         })
     );
+    Ok(())
 }
 
 #[test]
-fn strict_deserialization_rejects_unknown_question_and_answer_types() {
+fn strict_deserialization_rejects_unknown_question_and_answer_types() -> Result<()> {
     let unknown_question = json!({
         "type": "freeform",
         "instructions": "Explain why"
@@ -293,4 +296,5 @@ fn strict_deserialization_rejects_unknown_question_and_answer_types() {
         "uri": "files/123"
     });
     assert!(serde_json::from_value::<DecisionInput>(unknown_input_block).is_err());
+    Ok(())
 }

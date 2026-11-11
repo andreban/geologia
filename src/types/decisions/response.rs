@@ -140,19 +140,14 @@ pub struct DecisionPromptFeedback {
 #[serde(rename_all = "snake_case")]
 pub enum DecisionBlockReason {
     /// Blocked for safety reasons (`"safety"`).
-    #[serde(alias = "SAFETY")]
     Safety,
     /// Blocked for other reasons (`"other"`).
-    #[serde(alias = "OTHER")]
     Other,
     /// Blocked due to a blocklist match (`"blocklist"`).
-    #[serde(alias = "BLOCKLIST")]
     Blocklist,
     /// Blocked due to prohibited content (`"prohibited_content"`).
-    #[serde(alias = "PROHIBITED_CONTENT")]
     ProhibitedContent,
     /// Blocked due to image safety reasons (`"image_safety"`).
-    #[serde(alias = "IMAGE_SAFETY")]
     ImageSafety,
 }
 
@@ -213,19 +208,14 @@ pub struct DecisionModalityTokens {
 #[serde(rename_all = "snake_case")]
 pub enum DecisionModality {
     /// Text modality (`"text"`).
-    #[serde(alias = "TEXT")]
     Text,
     /// Image modality (`"image"`).
-    #[serde(alias = "IMAGE")]
     Image,
     /// Audio modality (`"audio"`).
-    #[serde(alias = "AUDIO")]
     Audio,
     /// Video modality (`"video"`).
-    #[serde(alias = "VIDEO")]
     Video,
     /// Document modality (`"document"`).
-    #[serde(alias = "DOCUMENT")]
     Document,
 }
 
