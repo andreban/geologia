@@ -38,6 +38,11 @@ pub enum Error {
         /// Description of the protocol or response invariant violation.
         message: String,
     },
+    /// A request or builder argument violated a client-side validation constraint.
+    InvalidArgument {
+        /// Description of the invalid argument or missing required field.
+        message: String,
+    },
     /// An error occurred while reading or decoding the SSE event stream.
     EventSourceError(LinesCodecError),
 }
@@ -57,6 +62,9 @@ impl Display for Error {
             Error::UnexpectedResponse { message } => {
                 write!(f, "Unexpected API response: {message}")
             }
+            Error::InvalidArgument { message } => {
+                write!(f, "Invalid argument: {message}")
+            }
             Error::EventSourceError(e) => {
                 write!(f, "EventSource Error: {e}")
             }
@@ -71,7 +79,9 @@ impl std::error::Error for Error {
             Error::HttpClient(e) => Some(e),
             Error::Serde(e) => Some(e),
             Error::VertexError(e) => Some(e),
-            Error::ApiError { .. } | Error::UnexpectedResponse { .. } => None,
+            Error::ApiError { .. }
+            | Error::UnexpectedResponse { .. }
+            | Error::InvalidArgument { .. } => None,
             Error::EventSourceError(e) => Some(e),
         }
     }

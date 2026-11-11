@@ -2914,7 +2914,7 @@ async fn create_decision_against_mock_server_evaluates_noul_choice_and_score_que
                 ],
             ),
         )
-        .build();
+        .build()?;
 
     let response = client.create_decision(&request).await?;
 
@@ -3004,7 +3004,7 @@ async fn create_decision_against_mock_server_with_multimodal_input() -> Result<(
             "open_sign_lit",
             NoulQuestion::new("Is the neon OPEN sign illuminated?"),
         )
-        .build();
+        .build()?;
 
     let response = client.create_decision(&request).await?;
 
@@ -3026,7 +3026,7 @@ async fn create_decision_against_mock_server_maps_structured_api_error() -> Resu
         .respond_with(ResponseTemplate::new(400).set_body_json(serde_json::json!({
             "error": {
                 "code": 400,
-                "message": "questions map must contain at least one question",
+                "message": "Unsupported decision model",
                 "status": "INVALID_ARGUMENT"
             }
         })))
@@ -3039,9 +3039,10 @@ async fn create_decision_against_mock_server_maps_structured_api_error() -> Resu
         .build();
 
     let request = CreateDecisionRequest::builder()
-        .model("gemini-decision-1")
-        .text_input("Empty questions test")
-        .build();
+        .model("unsupported-decision-model")
+        .text_input("Error mapping test")
+        .add_noul_question("q1", NoulQuestion::new("Is this valid?"))
+        .build()?;
 
     let err = client
         .create_decision(&request)
@@ -3053,10 +3054,7 @@ async fn create_decision_against_mock_server_maps_structured_api_error() -> Resu
         GeminiError::VertexError(vertex_err) => {
             assert_eq!(vertex_err.code, 400);
             assert_eq!(vertex_err.status, "INVALID_ARGUMENT");
-            assert_eq!(
-                vertex_err.message,
-                "questions map must contain at least one question"
-            );
+            assert_eq!(vertex_err.message, "Unsupported decision model");
         }
         other => panic!("expected VertexError, got {other:?}"),
     }

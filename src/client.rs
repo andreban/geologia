@@ -1415,7 +1415,7 @@ impl GeminiClient {
     ///             ],
     ///         ),
     ///     )
-    ///     .build();
+    ///     .build()?;
     ///
     /// let response = client.create_decision(&request).await?;
     /// if let Some(noul) = response.get_noul("needs_refund_review") {
@@ -1430,6 +1430,7 @@ impl GeminiClient {
         &self,
         request: &CreateDecisionRequest,
     ) -> GeminiResult<CreateDecisionResponse> {
+        request.validate()?;
         let endpoint_url = self.endpoint_url("decisions");
         let resp = self
             .client

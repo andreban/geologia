@@ -8,6 +8,10 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use super::content::DecisionTextContent;
+use crate::error::{Error, Result};
+
+/// Maximum number of options or score levels allowed in a single [`ChoiceQuestion`] or [`ScoreQuestion`].
+pub const MAX_QUESTION_CRITERIA: usize = 255;
 
 /// A text content block used inside [`DecisionInstructions`].
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -22,6 +26,20 @@ impl DecisionInstructionContent {
     pub fn text(text: impl Into<String>) -> Self {
         Self::Text(DecisionTextContent::new(text))
     }
+
+    /// Validates that the instruction content block has non-empty text.
+    pub fn validate(&self) -> Result<()> {
+        match self {
+            Self::Text(text) => {
+                if text.text.trim().is_empty() {
+                    return Err(Error::InvalidArgument {
+                        message: "decision instruction text must not be empty".into(),
+                    });
+                }
+                Ok(())
+            }
+        }
+    }
 }
 
 /// Instructions for a decision question ([`NoulQuestion`], [`ChoiceQuestion`], or [`ScoreQuestion`]).
@@ -34,6 +52,35 @@ pub enum DecisionInstructions {
     Content(DecisionInstructionContent),
     /// A sequence of structured text instruction blocks.
     Contents(Vec<DecisionInstructionContent>),
+}
+
+impl DecisionInstructions {
+    /// Validates that the instructions are non-empty.
+    pub fn validate(&self) -> Result<()> {
+        match self {
+            Self::Text(text) => {
+                if text.trim().is_empty() {
+                    return Err(Error::InvalidArgument {
+                        message: "decision question `instructions` must not be empty".into(),
+                    });
+                }
+                Ok(())
+            }
+            Self::Content(block) => block.validate(),
+            Self::Contents(blocks) => {
+                if blocks.is_empty() {
+                    return Err(Error::InvalidArgument {
+                        message: "decision question `instructions` content list must not be empty"
+                            .into(),
+                    });
+                }
+                for block in blocks {
+                    block.validate()?;
+                }
+                Ok(())
+            }
+        }
+    }
 }
 
 impl From<String> for DecisionInstructions {
@@ -95,6 +142,47 @@ impl Question {
         S: Into<String>,
     {
         Self::Score(ScoreQuestion::new(instructions, criteria))
+    }
+
+    /// Validates that the question instructions and rubric criteria meet the Decisions API contract.
+    pub fn validate(&self) -> Result<()> {
+        match self {
+            Self::Noul(noul) => noul.instructions.validate(),
+            Self::Choice(choice) => {
+                choice.instructions.validate()?;
+                if !(2..=MAX_QUESTION_CRITERIA).contains(&choice.criteria.len()) {
+                    return Err(Error::InvalidArgument {
+                        message: format!(
+                            "choice question requires between 2 and {MAX_QUESTION_CRITERIA} options, got {}",
+                            choice.criteria.len()
+                        ),
+                    });
+                }
+                if choice.criteria.keys().any(|k| k.trim().is_empty()) {
+                    return Err(Error::InvalidArgument {
+                        message: "choice question option ID must not be empty".into(),
+                    });
+                }
+                Ok(())
+            }
+            Self::Score(score) => {
+                score.instructions.validate()?;
+                if !(2..=MAX_QUESTION_CRITERIA).contains(&score.criteria.len()) {
+                    return Err(Error::InvalidArgument {
+                        message: format!(
+                            "score question requires between 2 and {MAX_QUESTION_CRITERIA} rubric levels, got {}",
+                            score.criteria.len()
+                        ),
+                    });
+                }
+                if score.criteria.iter().any(|lvl| lvl.trim().is_empty()) {
+                    return Err(Error::InvalidArgument {
+                        message: "score question rubric level description must not be empty".into(),
+                    });
+                }
+                Ok(())
+            }
+        }
     }
 }
 

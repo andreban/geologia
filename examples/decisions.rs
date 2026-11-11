@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 ],
             ),
         )
-        .build();
+        .build()?;
 
     let response = gemini_client.create_decision(&request).await?;
 

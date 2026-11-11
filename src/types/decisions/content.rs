@@ -5,6 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::{Error, Result};
 use crate::types::common::encode_base64;
 
 /// Shared input context for a [`CreateDecisionRequest`](super::CreateDecisionRequest).
@@ -17,6 +18,34 @@ pub enum DecisionInput {
     Content(DecisionInputContent),
     /// A list of multimodal content blocks.
     Contents(Vec<DecisionInputContent>),
+}
+
+impl DecisionInput {
+    /// Validates that the decision input is non-empty and all multimodal blocks are well-formed.
+    pub fn validate(&self) -> Result<()> {
+        match self {
+            Self::Text(text) => {
+                if text.trim().is_empty() {
+                    return Err(Error::InvalidArgument {
+                        message: "decision request text `input` must not be empty".into(),
+                    });
+                }
+                Ok(())
+            }
+            Self::Content(block) => block.validate(),
+            Self::Contents(blocks) => {
+                if blocks.is_empty() {
+                    return Err(Error::InvalidArgument {
+                        message: "decision request `input` content list must not be empty".into(),
+                    });
+                }
+                for block in blocks {
+                    block.validate()?;
+                }
+                Ok(())
+            }
+        }
+    }
 }
 
 impl From<String> for DecisionInput {
@@ -67,87 +96,115 @@ impl DecisionInputContent {
 
     /// Creates an image content block referencing a URI (such as a Files API URI).
     pub fn image_uri(uri: impl Into<String>, mime_type: impl Into<String>) -> Self {
-        Self::Image(DecisionImageContent {
-            data: None,
-            uri: Some(uri.into()),
-            mime_type: Some(mime_type.into()),
-            resolution: None,
-        })
+        Self::Image(DecisionImageContent::from_uri(uri, mime_type))
     }
 
     /// Creates an inline base64-encoded image content block from raw bytes.
     pub fn image_bytes(bytes: impl AsRef<[u8]>, mime_type: impl Into<String>) -> Self {
-        Self::Image(DecisionImageContent {
-            data: Some(encode_base64(bytes.as_ref())),
-            uri: None,
-            mime_type: Some(mime_type.into()),
-            resolution: None,
-        })
+        Self::Image(DecisionImageContent::from_bytes(bytes, mime_type))
     }
 
     /// Creates an audio content block referencing a URI.
     pub fn audio_uri(uri: impl Into<String>, mime_type: impl Into<String>) -> Self {
-        Self::Audio(DecisionAudioContent {
-            data: None,
-            uri: Some(uri.into()),
-            mime_type: Some(mime_type.into()),
-            channels: None,
-            sample_rate: None,
-        })
+        Self::Audio(DecisionAudioContent::from_uri(uri, mime_type))
     }
 
     /// Creates an inline base64-encoded audio content block from raw bytes.
     pub fn audio_bytes(bytes: impl AsRef<[u8]>, mime_type: impl Into<String>) -> Self {
-        Self::Audio(DecisionAudioContent {
-            data: Some(encode_base64(bytes.as_ref())),
-            uri: None,
-            mime_type: Some(mime_type.into()),
-            channels: None,
-            sample_rate: None,
-        })
+        Self::Audio(DecisionAudioContent::from_bytes(bytes, mime_type))
     }
 
     /// Creates a video content block referencing a URI.
     pub fn video_uri(uri: impl Into<String>, mime_type: impl Into<String>) -> Self {
-        Self::Video(DecisionVideoContent {
-            data: None,
-            uri: Some(uri.into()),
-            mime_type: Some(mime_type.into()),
-            name: None,
-            processing: None,
-            resolution: None,
-        })
+        Self::Video(DecisionVideoContent::from_uri(uri, mime_type))
     }
 
     /// Creates an inline base64-encoded video content block from raw bytes.
     pub fn video_bytes(bytes: impl AsRef<[u8]>, mime_type: impl Into<String>) -> Self {
-        Self::Video(DecisionVideoContent {
-            data: Some(encode_base64(bytes.as_ref())),
-            uri: None,
-            mime_type: Some(mime_type.into()),
-            name: None,
-            processing: None,
-            resolution: None,
-        })
+        Self::Video(DecisionVideoContent::from_bytes(bytes, mime_type))
     }
 
     /// Creates a document content block referencing a URI.
     pub fn document_uri(uri: impl Into<String>, mime_type: impl Into<String>) -> Self {
-        Self::Document(DecisionDocumentContent {
-            data: None,
-            uri: Some(uri.into()),
-            mime_type: Some(mime_type.into()),
-        })
+        Self::Document(DecisionDocumentContent::from_uri(uri, mime_type))
     }
 
     /// Creates an inline base64-encoded document content block from raw bytes.
     pub fn document_bytes(bytes: impl AsRef<[u8]>, mime_type: impl Into<String>) -> Self {
-        Self::Document(DecisionDocumentContent {
-            data: Some(encode_base64(bytes.as_ref())),
-            uri: None,
-            mime_type: Some(mime_type.into()),
-        })
+        Self::Document(DecisionDocumentContent::from_bytes(bytes, mime_type))
     }
+
+    /// Validates that the content block is non-empty and media blocks specify exactly one
+    /// source (`data` or `uri`) and a non-empty `mime_type`.
+    pub fn validate(&self) -> Result<()> {
+        match self {
+            Self::Text(text) => {
+                if text.text.trim().is_empty() {
+                    return Err(Error::InvalidArgument {
+                        message: "decision text content block must not have empty `text`".into(),
+                    });
+                }
+                Ok(())
+            }
+            Self::Image(img) => validate_media_source(
+                "image",
+                img.data.as_deref(),
+                img.uri.as_deref(),
+                img.mime_type.as_deref(),
+            ),
+            Self::Audio(aud) => validate_media_source(
+                "audio",
+                aud.data.as_deref(),
+                aud.uri.as_deref(),
+                aud.mime_type.as_deref(),
+            ),
+            Self::Video(vid) => validate_media_source(
+                "video",
+                vid.data.as_deref(),
+                vid.uri.as_deref(),
+                vid.mime_type.as_deref(),
+            ),
+            Self::Document(doc) => validate_media_source(
+                "document",
+                doc.data.as_deref(),
+                doc.uri.as_deref(),
+                doc.mime_type.as_deref(),
+            ),
+        }
+    }
+}
+
+fn validate_media_source(
+    kind: &str,
+    data: Option<&str>,
+    uri: Option<&str>,
+    mime_type: Option<&str>,
+) -> Result<()> {
+    let has_data = data.is_some_and(|d| !d.trim().is_empty());
+    let has_uri = uri.is_some_and(|u| !u.trim().is_empty());
+    match (has_data, has_uri) {
+        (true, false) | (false, true) => {}
+        (false, false) => {
+            return Err(Error::InvalidArgument {
+                message: format!(
+                    "decision {kind} content block must specify either `data` or `uri`"
+                ),
+            });
+        }
+        (true, true) => {
+            return Err(Error::InvalidArgument {
+                message: format!(
+                    "decision {kind} content block cannot specify both `data` and `uri`"
+                ),
+            });
+        }
+    }
+    if !mime_type.is_some_and(|m| !m.trim().is_empty()) {
+        return Err(Error::InvalidArgument {
+            message: format!("decision {kind} content block requires a non-empty `mime_type`"),
+        });
+    }
+    Ok(())
 }
 
 /// A text content block.
@@ -177,7 +234,7 @@ impl DecisionTextContent {
 }
 
 /// An image content block.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct DecisionImageContent {
     /// Base64-encoded image bytes.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -193,8 +250,36 @@ pub struct DecisionImageContent {
     pub resolution: Option<DecisionMediaResolution>,
 }
 
+impl DecisionImageContent {
+    /// Creates an image content block referencing a URI.
+    pub fn from_uri(uri: impl Into<String>, mime_type: impl Into<String>) -> Self {
+        Self {
+            data: None,
+            uri: Some(uri.into()),
+            mime_type: Some(mime_type.into()),
+            resolution: None,
+        }
+    }
+
+    /// Creates an inline base64-encoded image content block from raw bytes.
+    pub fn from_bytes(bytes: impl AsRef<[u8]>, mime_type: impl Into<String>) -> Self {
+        Self {
+            data: Some(encode_base64(bytes.as_ref())),
+            uri: None,
+            mime_type: Some(mime_type.into()),
+            resolution: None,
+        }
+    }
+
+    /// Sets the media resolution for this image.
+    pub fn with_resolution(mut self, resolution: DecisionMediaResolution) -> Self {
+        self.resolution = Some(resolution);
+        self
+    }
+}
+
 /// An audio content block.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct DecisionAudioContent {
     /// Base64-encoded audio bytes.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -213,8 +298,44 @@ pub struct DecisionAudioContent {
     pub sample_rate: Option<i32>,
 }
 
+impl DecisionAudioContent {
+    /// Creates an audio content block referencing a URI.
+    pub fn from_uri(uri: impl Into<String>, mime_type: impl Into<String>) -> Self {
+        Self {
+            data: None,
+            uri: Some(uri.into()),
+            mime_type: Some(mime_type.into()),
+            channels: None,
+            sample_rate: None,
+        }
+    }
+
+    /// Creates an inline base64-encoded audio content block from raw bytes.
+    pub fn from_bytes(bytes: impl AsRef<[u8]>, mime_type: impl Into<String>) -> Self {
+        Self {
+            data: Some(encode_base64(bytes.as_ref())),
+            uri: None,
+            mime_type: Some(mime_type.into()),
+            channels: None,
+            sample_rate: None,
+        }
+    }
+
+    /// Sets the number of audio channels.
+    pub fn with_channels(mut self, channels: i32) -> Self {
+        self.channels = Some(channels);
+        self
+    }
+
+    /// Sets the audio sample rate in Hz.
+    pub fn with_sample_rate(mut self, sample_rate: i32) -> Self {
+        self.sample_rate = Some(sample_rate);
+        self
+    }
+}
+
 /// A video content block.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct DecisionVideoContent {
     /// Base64-encoded video bytes.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -236,8 +357,52 @@ pub struct DecisionVideoContent {
     pub resolution: Option<DecisionMediaResolution>,
 }
 
+impl DecisionVideoContent {
+    /// Creates a video content block referencing a URI.
+    pub fn from_uri(uri: impl Into<String>, mime_type: impl Into<String>) -> Self {
+        Self {
+            data: None,
+            uri: Some(uri.into()),
+            mime_type: Some(mime_type.into()),
+            name: None,
+            processing: None,
+            resolution: None,
+        }
+    }
+
+    /// Creates an inline base64-encoded video content block from raw bytes.
+    pub fn from_bytes(bytes: impl AsRef<[u8]>, mime_type: impl Into<String>) -> Self {
+        Self {
+            data: Some(encode_base64(bytes.as_ref())),
+            uri: None,
+            mime_type: Some(mime_type.into()),
+            name: None,
+            processing: None,
+            resolution: None,
+        }
+    }
+
+    /// Sets a user-defined name for this video content block.
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    /// Sets the video processing configuration.
+    pub fn with_processing(mut self, processing: DecisionVideoProcessing) -> Self {
+        self.processing = Some(processing);
+        self
+    }
+
+    /// Sets the media resolution for this video.
+    pub fn with_resolution(mut self, resolution: DecisionMediaResolution) -> Self {
+        self.resolution = Some(resolution);
+        self
+    }
+}
+
 /// A document content block.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct DecisionDocumentContent {
     /// Base64-encoded document bytes.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -248,6 +413,26 @@ pub struct DecisionDocumentContent {
     /// The MIME type of the document (for example, `"application/pdf"`, `"text/csv"`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
+}
+
+impl DecisionDocumentContent {
+    /// Creates a document content block referencing a URI.
+    pub fn from_uri(uri: impl Into<String>, mime_type: impl Into<String>) -> Self {
+        Self {
+            data: None,
+            uri: Some(uri.into()),
+            mime_type: Some(mime_type.into()),
+        }
+    }
+
+    /// Creates an inline base64-encoded document content block from raw bytes.
+    pub fn from_bytes(bytes: impl AsRef<[u8]>, mime_type: impl Into<String>) -> Self {
+        Self {
+            data: Some(encode_base64(bytes.as_ref())),
+            uri: None,
+            mime_type: Some(mime_type.into()),
+        }
+    }
 }
 
 /// Media resolution level for image or video content blocks in the Decisions API.

@@ -40,7 +40,7 @@ fn serialize_and_deserialize_full_decision_request_and_response() -> Result<()> 
                 ],
             ),
         )
-        .build();
+        .build()?;
 
     let serialized = serde_json::to_value(&request)?;
     assert_eq!(serialized["model"], "gemini-decision-1");
@@ -169,19 +169,20 @@ fn multimodal_input_and_structured_instructions_round_trip() -> Result<()> {
         .model("gemini-decision-1")
         .text_input("Inspect the following media items:")
         .add_input_content(DecisionInputContent::image_bytes(b"png-bytes", "image/png"))
-        .add_input_content(DecisionInputContent::Video(DecisionVideoContent {
-            uri: Some("https://generativelanguage.googleapis.com/v1beta/files/vid-1".into()),
-            mime_type: Some("video/mp4".into()),
-            name: Some("clip_1".into()),
-            processing: Some(DecisionVideoProcessing::StaticConfig(
+        .add_input_content(DecisionInputContent::Video(
+            DecisionVideoContent::from_uri(
+                "https://generativelanguage.googleapis.com/v1beta/files/vid-1",
+                "video/mp4",
+            )
+            .with_name("clip_1")
+            .with_processing(DecisionVideoProcessing::StaticConfig(
                 StaticMediaProcessing::new()
                     .with_start_offset("0s")
                     .with_end_offset("5s")
                     .with_fps(2.0),
-            )),
-            resolution: Some(DecisionMediaResolution::High),
-            ..Default::default()
-        }))
+            ))
+            .with_resolution(DecisionMediaResolution::High),
+        ))
         .add_input_content(DecisionInputContent::audio_uri(
             "https://generativelanguage.googleapis.com/v1beta/files/aud-1",
             "audio/wav",
@@ -196,7 +197,7 @@ fn multimodal_input_and_structured_instructions_round_trip() -> Result<()> {
                 "Does the clip match the document?",
             )])),
         )
-        .build();
+        .build()?;
 
     let value = serde_json::to_value(&request)?;
     assert_eq!(value["input"][0]["type"], "text");
@@ -324,14 +325,16 @@ fn question_and_content_convenience_constructors_round_trip() -> Result<()> {
             b"pdf-data",
             "application/pdf",
         ))
-        .add_input_content(DecisionInputContent::Video(DecisionVideoContent {
-            uri: Some("https://generativelanguage.googleapis.com/v1beta/files/v2".into()),
-            processing: Some(DecisionVideoProcessing::Mode(
+        .add_input_content(DecisionInputContent::Video(
+            DecisionVideoContent::from_uri(
+                "https://generativelanguage.googleapis.com/v1beta/files/v2",
+                "video/mp4",
+            )
+            .with_processing(DecisionVideoProcessing::Mode(
                 DecisionMediaProcessingMode::Agentic,
-            )),
-            resolution: Some(DecisionMediaResolution::UltraHigh),
-            ..Default::default()
-        }))
+            ))
+            .with_resolution(DecisionMediaResolution::UltraHigh),
+        ))
         .questions([
             ("q_noul", Question::from(noul_q)),
             ("q_choice", Question::from(choice_q)),
@@ -346,7 +349,7 @@ fn question_and_content_convenience_constructors_round_trip() -> Result<()> {
                 Question::score("Simple score", ["0", "1"]),
             ),
         ])
-        .build();
+        .build()?;
 
     let value = serde_json::to_value(&request)?;
 
@@ -457,4 +460,126 @@ fn all_annotation_variants_and_grounding_usage_round_trip() -> Result<()> {
     let decoded_response: CreateDecisionResponse = serde_json::from_value(response_json)?;
     assert_eq!(decoded_response, response);
     Ok(())
+}
+
+#[test]
+fn builder_and_request_validation_reject_missing_or_invalid_fields() {
+    // Missing model
+    assert!(
+        CreateDecisionRequest::builder()
+            .text_input("hello")
+            .add_noul_question("q1", NoulQuestion::new("Is valid?"))
+            .build()
+            .is_err()
+    );
+
+    // Empty model setter
+    assert!(
+        CreateDecisionRequest::builder()
+            .model("   ")
+            .text_input("hello")
+            .add_noul_question("q1", NoulQuestion::new("Is valid?"))
+            .build()
+            .is_err()
+    );
+
+    // Missing input
+    assert!(
+        CreateDecisionRequest::builder()
+            .model("gemini-decision-1")
+            .add_noul_question("q1", NoulQuestion::new("Is valid?"))
+            .build()
+            .is_err()
+    );
+
+    // Empty text input setter
+    assert!(
+        CreateDecisionRequest::builder()
+            .model("gemini-decision-1")
+            .text_input("")
+            .add_noul_question("q1", NoulQuestion::new("Is valid?"))
+            .build()
+            .is_err()
+    );
+
+    // Empty questions map
+    assert!(
+        CreateDecisionRequest::builder()
+            .model("gemini-decision-1")
+            .text_input("hello")
+            .build()
+            .is_err()
+    );
+
+    // Empty question ID
+    assert!(
+        CreateDecisionRequest::builder()
+            .model("gemini-decision-1")
+            .text_input("hello")
+            .add_noul_question("", NoulQuestion::new("Is valid?"))
+            .build()
+            .is_err()
+    );
+
+    // Choice question with fewer than 2 options
+    assert!(
+        CreateDecisionRequest::builder()
+            .model("gemini-decision-1")
+            .text_input("hello")
+            .add_choice_question(
+                "q1",
+                ChoiceQuestion::new("Pick one", [("only_one", "Single option")])
+            )
+            .build()
+            .is_err()
+    );
+
+    // Score question with fewer than 2 levels
+    assert!(
+        CreateDecisionRequest::builder()
+            .model("gemini-decision-1")
+            .text_input("hello")
+            .add_score_question("q1", ScoreQuestion::new("Rate", ["Only one level"]))
+            .build()
+            .is_err()
+    );
+
+    // Media block with both data and uri
+    assert!(
+        CreateDecisionRequest::builder()
+            .model("gemini-decision-1")
+            .add_input_content(DecisionInputContent::Image(DecisionImageContent {
+                data: Some("YWJj".into()),
+                uri: Some("files/123".into()),
+                mime_type: Some("image/png".into()),
+                resolution: None,
+            }))
+            .add_noul_question("q1", NoulQuestion::new("Is valid?"))
+            .build()
+            .is_err()
+    );
+
+    // Media block with neither data nor uri
+    assert!(
+        CreateDecisionRequest::builder()
+            .model("gemini-decision-1")
+            .add_input_content(DecisionInputContent::Image(DecisionImageContent {
+                data: None,
+                uri: None,
+                mime_type: Some("image/png".into()),
+                resolution: None,
+            }))
+            .add_noul_question("q1", NoulQuestion::new("Is valid?"))
+            .build()
+            .is_err()
+    );
+
+    // Exceeding MAX_DECISION_QUESTIONS (1,000)
+    let mut builder = CreateDecisionRequest::builder()
+        .model("gemini-decision-1")
+        .text_input("hello");
+    for idx in 0..=MAX_DECISION_QUESTIONS {
+        builder = builder.add_noul_question(format!("q_{idx}"), NoulQuestion::new("Check?"));
+    }
+    assert!(builder.build().is_err());
 }
