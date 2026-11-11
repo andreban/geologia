@@ -3007,6 +3007,7 @@ async fn create_decision_against_mock_server_with_multimodal_input() -> Result<(
         .build();
 
     let response = client.create_decision(&request).await?;
+
     let ans = response
         .get_noul("open_sign_lit")
         .ok_or("expected open_sign_lit answer")?;

@@ -298,3 +298,163 @@ fn strict_deserialization_rejects_unknown_question_and_answer_types() -> Result<
     assert!(serde_json::from_value::<DecisionInput>(unknown_input_block).is_err());
     Ok(())
 }
+
+#[test]
+fn question_and_content_convenience_constructors_round_trip() -> Result<()> {
+    let criteria = NoulCriteria::new()
+        .with_true_description("Condition holds")
+        .with_false_description("Condition does not hold");
+    let noul_q = NoulQuestion::with_criteria(
+        DecisionInstructionContent::text("Check binary condition"),
+        criteria,
+    );
+    let choice_q = ChoiceQuestion::from_options("Pick a tier", ["free", "pro"])
+        .add_option("enterprise", "Dedicated support and SLA");
+    let score_q = ScoreQuestion::new("Score quality", ["Poor", "Fair"]).add_level("Excellent");
+
+    let request = CreateDecisionRequest::builder()
+        .model("gemini-decision-1")
+        .input(DecisionInputContent::audio_bytes(b"wav-data", "audio/wav"))
+        .add_input_content(DecisionInputContent::video_uri(
+            "https://generativelanguage.googleapis.com/v1beta/files/v1",
+            "video/mp4",
+        ))
+        .add_input_content(DecisionInputContent::video_bytes(b"mp4-data", "video/mp4"))
+        .add_input_content(DecisionInputContent::document_bytes(
+            b"pdf-data",
+            "application/pdf",
+        ))
+        .add_input_content(DecisionInputContent::Video(DecisionVideoContent {
+            uri: Some("https://generativelanguage.googleapis.com/v1beta/files/v2".into()),
+            processing: Some(DecisionVideoProcessing::Mode(
+                DecisionMediaProcessingMode::Agentic,
+            )),
+            resolution: Some(DecisionMediaResolution::UltraHigh),
+            ..Default::default()
+        }))
+        .questions([
+            ("q_noul", Question::from(noul_q)),
+            ("q_choice", Question::from(choice_q)),
+            ("q_score", Question::from(score_q)),
+            ("q_helper_noul", Question::noul("Simple binary")),
+            (
+                "q_helper_choice",
+                Question::choice("Simple choice", [("a", "Option A"), ("b", "Option B")]),
+            ),
+            (
+                "q_helper_score",
+                Question::score("Simple score", ["0", "1"]),
+            ),
+        ])
+        .build();
+
+    let value = serde_json::to_value(&request)?;
+
+    assert_eq!(value["input"][0]["type"], "audio");
+    assert_eq!(value["input"][0]["data"], "d2F2LWRhdGE=");
+    assert_eq!(value["input"][1]["type"], "video");
+    assert_eq!(value["input"][2]["data"], "bXA0LWRhdGE=");
+    assert_eq!(value["input"][3]["type"], "document");
+    assert_eq!(value["input"][3]["data"], "cGRmLWRhdGE=");
+    assert_eq!(value["input"][4]["processing"], "agentic");
+    assert_eq!(value["input"][4]["resolution"], "ultra_high");
+    assert_eq!(value["questions"]["q_choice"]["criteria"]["free"], "");
+    assert_eq!(
+        value["questions"]["q_choice"]["criteria"]["enterprise"],
+        "Dedicated support and SLA"
+    );
+    assert_eq!(
+        value["questions"]["q_score"]["criteria"],
+        json!(["Poor", "Fair", "Excellent"])
+    );
+
+    let decoded: CreateDecisionRequest = serde_json::from_value(value)?;
+    assert_eq!(decoded, request);
+    Ok(())
+}
+
+#[test]
+fn all_annotation_variants_and_grounding_usage_round_trip() -> Result<()> {
+    let annotated = DecisionTextContent::new("Annotated transcript").with_annotations(vec![
+        DecisionAnnotation::FileCitation(DecisionFileCitation {
+            start_index: Some(0),
+            end_index: Some(9),
+            file_name: Some("spec.pdf".into()),
+            source: Some("upload".into()),
+            uri: Some("files/spec-1".into()),
+        }),
+        DecisionAnnotation::PlaceCitation(DecisionPlaceCitation {
+            start_index: Some(10),
+            end_index: Some(20),
+            name: Some("Coffee Shop".into()),
+            place_id: Some("place-123".into()),
+            review_snippets: Some(vec![DecisionReviewSnippet {
+                review_id: Some("rev-1".into()),
+                title: Some("Great espresso".into()),
+                url: Some("https://maps.google.com/?cid=1".into()),
+            }]),
+            url: Some("https://maps.google.com/?cid=0".into()),
+        }),
+        DecisionAnnotation::SpeechMetadata(DecisionSpeechAnnotation {
+            start_index: Some(0),
+            end_index: Some(20),
+            language: Some("en-US".into()),
+            speaker: Some("speaker_1".into()),
+            words: Some(vec![DecisionWordInfo {
+                word: Some("Annotated".into()),
+                start_offset: Some(0.0),
+                end_offset: Some(0.5),
+                start_index: Some(0),
+                end_index: Some(9),
+            }]),
+        }),
+    ]);
+
+    let content = DecisionInputContent::Text(annotated);
+    let content_json = serde_json::to_value(&content)?;
+    let round_trip_content: DecisionInputContent = serde_json::from_value(content_json)?;
+    assert_eq!(round_trip_content, content);
+
+    let response = CreateDecisionResponse {
+        answers: None,
+        prompt_feedback: Some(DecisionPromptFeedback {
+            block_reason: Some(DecisionBlockReason::ProhibitedContent),
+            block_reason_message: None,
+        }),
+        usage: Some(DecisionUsage {
+            grounding_tool_count: Some(vec![
+                DecisionGroundingToolCount {
+                    count: Some(2),
+                    tool_type: Some(DecisionGroundingToolType::GoogleSearch),
+                },
+                DecisionGroundingToolCount {
+                    count: Some(1),
+                    tool_type: Some(DecisionGroundingToolType::GoogleMaps),
+                },
+                DecisionGroundingToolCount {
+                    count: Some(3),
+                    tool_type: Some(DecisionGroundingToolType::Retrieval),
+                },
+            ]),
+            ..Default::default()
+        }),
+    };
+
+    let response_json = serde_json::to_value(&response)?;
+    assert_eq!(
+        response_json["usage"]["grounding_tool_count"][0]["type"],
+        "google_search"
+    );
+    assert_eq!(
+        response_json["usage"]["grounding_tool_count"][1]["type"],
+        "google_maps"
+    );
+    assert_eq!(
+        response_json["usage"]["grounding_tool_count"][2]["type"],
+        "retrieval"
+    );
+
+    let decoded_response: CreateDecisionResponse = serde_json::from_value(response_json)?;
+    assert_eq!(decoded_response, response);
+    Ok(())
+}
