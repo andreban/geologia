@@ -4,8 +4,7 @@
 use std::{env, error::Error};
 
 use geologia::prelude::{
-    ChoiceQuestion, CreateDecisionRequest, DEFAULT_DECISION_MODEL, GeminiClient, NoulQuestion,
-    ScoreQuestion,
+    ChoiceQuestion, CreateDecisionRequest, GeminiClient, NoulQuestion, ScoreQuestion,
 };
 
 #[tokio::main]
@@ -17,7 +16,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let gemini_client = GeminiClient::new(api_key);
 
     let request = CreateDecisionRequest::builder()
-        .model(DEFAULT_DECISION_MODEL)
+        .model("gemini-decision-1")
         .text_input(
             "Customer support ticket #1084: 'I received my espresso machine yesterday, \
              but the water reservoir arrived cracked and leaks all over the counter when filled. \

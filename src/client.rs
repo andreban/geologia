@@ -1398,7 +1398,7 @@ impl GeminiClient {
     /// # async fn run() -> geologia::error::Result<()> {
     /// let client = GeminiClient::new("YOUR_API_KEY".into());
     /// let request = CreateDecisionRequest::builder()
-    ///     .model(DEFAULT_DECISION_MODEL)
+    ///     .model("gemini-decision-1")
     ///     .text_input("Order #42 was delivered 3 days late and the outer box was crushed.")
     ///     .add_noul_question(
     ///         "needs_refund_review",

@@ -2884,6 +2884,7 @@ async fn create_decision_against_mock_server_evaluates_noul_choice_and_score_que
         .build();
 
     let request = CreateDecisionRequest::builder()
+        .model("gemini-decision-1")
         .text_input("Customer ticket: My headphones arrived with a cracked headband and the left speaker does not produce sound.")
         .add_noul_question(
             "is_defective",
@@ -2993,6 +2994,7 @@ async fn create_decision_against_mock_server_with_multimodal_input() -> Result<(
         .build();
 
     let request = CreateDecisionRequest::builder()
+        .model("gemini-decision-1")
         .add_input_content(DecisionInputContent::text("Review the storefront photo."))
         .add_input_content(DecisionInputContent::image_uri(
             "https://generativelanguage.googleapis.com/v1beta/files/store-photo-1",
@@ -3036,6 +3038,7 @@ async fn create_decision_against_mock_server_maps_structured_api_error() -> Resu
         .build();
 
     let request = CreateDecisionRequest::builder()
+        .model("gemini-decision-1")
         .text_input("Empty questions test")
         .build();
 

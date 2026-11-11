@@ -164,6 +164,7 @@ fn serialize_and_deserialize_full_decision_request_and_response() {
 #[test]
 fn multimodal_input_and_structured_instructions_round_trip() {
     let request = CreateDecisionRequest::builder()
+        .model("gemini-decision-1")
         .text_input("Inspect the following media items:")
         .add_input_content(DecisionInputContent::image_bytes(b"png-bytes", "image/png"))
         .add_input_content(DecisionInputContent::Video(DecisionVideoContent {
