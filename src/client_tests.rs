@@ -2788,3 +2788,275 @@ async fn generate_content_image_generation_sends_modalities_and_decodes_inline_d
     assert_eq!(bytes, b"hello");
     Ok(())
 }
+
+#[tokio::test]
+async fn create_decision_against_mock_server_evaluates_noul_choice_and_score_questions()
+-> Result<()> {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/decisions"))
+        .and(header("x-goog-api-key", "test-api-key"))
+        .and(body_json(serde_json::json!({
+            "model": "gemini-decision-1",
+            "input": "Customer ticket: My headphones arrived with a cracked headband and the left speaker does not produce sound.",
+            "questions": {
+                "is_defective": {
+                    "type": "noul",
+                    "instructions": "Does the customer report a physical or functional product defect?",
+                    "criteria": {
+                        "true_description": "Customer reports physical damage or non-working hardware",
+                        "false_description": "Customer inquiry is unrelated to hardware defects"
+                    }
+                },
+                "department": {
+                    "type": "choice",
+                    "instructions": "Which support queue should handle this ticket?",
+                    "criteria": {
+                        "billing": "Payment, invoice, or subscription charges",
+                        "warranty": "Damaged or defective hardware replacement",
+                        "general": "General product questions"
+                    }
+                },
+                "severity": {
+                    "type": "score",
+                    "instructions": "Rate the severity of the product issue.",
+                    "criteria": [
+                        "No functional impact",
+                        "Minor cosmetic blemish",
+                        "Product is unusable due to damage or failure"
+                    ]
+                }
+            }
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "answers": {
+                "is_defective": {
+                    "type": "noul",
+                    "noul": 0.99,
+                    "confidence": 0.99
+                },
+                "department": {
+                    "type": "choice",
+                    "choice": "warranty",
+                    "confidence": 0.94,
+                    "probabilities": {
+                        "billing": 0.02,
+                        "warranty": 0.94,
+                        "general": 0.04
+                    }
+                },
+                "severity": {
+                    "type": "score",
+                    "score": 1.92,
+                    "confidence": 0.93,
+                    "probabilities": {
+                        "0": 0.01,
+                        "1": 0.06,
+                        "2": 0.93
+                    },
+                    "legend": {
+                        "0": "No functional impact",
+                        "1": "Minor cosmetic blemish",
+                        "2": "Product is unusable due to damage or failure"
+                    }
+                }
+            },
+            "usage": {
+                "initial_input_tokens": 24,
+                "total_input_tokens": 115,
+                "total_output_tokens": 12,
+                "total_tokens": 127,
+                "input_tokens_by_modality": [
+                    {
+                        "modality": "text",
+                        "tokens": 115
+                    }
+                ]
+            }
+        })))
+        .expect(1)
+        .mount(&mock_server)
+        .await;
+
+    let client = GeminiClient::builder("test-api-key")
+        .base_url(mock_server.uri())
+        .build();
+
+    let request = CreateDecisionRequest::builder()
+        .model("gemini-decision-1")
+        .text_input("Customer ticket: My headphones arrived with a cracked headband and the left speaker does not produce sound.")
+        .add_noul_question(
+            "is_defective",
+            NoulQuestion::new("Does the customer report a physical or functional product defect?")
+                .true_description("Customer reports physical damage or non-working hardware")
+                .false_description("Customer inquiry is unrelated to hardware defects"),
+        )
+        .add_choice_question(
+            "department",
+            ChoiceQuestion::new(
+                "Which support queue should handle this ticket?",
+                [
+                    ("billing", "Payment, invoice, or subscription charges"),
+                    ("warranty", "Damaged or defective hardware replacement"),
+                    ("general", "General product questions"),
+                ],
+            ),
+        )
+        .add_score_question(
+            "severity",
+            ScoreQuestion::new(
+                "Rate the severity of the product issue.",
+                [
+                    "No functional impact",
+                    "Minor cosmetic blemish",
+                    "Product is unusable due to damage or failure",
+                ],
+            ),
+        )
+        .build()?;
+
+    let response = client.create_decision(&request).await?;
+
+    let is_defective = response
+        .get_noul("is_defective")
+        .ok_or("expected is_defective noul answer")?;
+    assert_eq!(is_defective.noul, 0.99);
+    assert_eq!(is_defective.confidence, 0.99);
+
+    let department = response
+        .get_choice("department")
+        .ok_or("expected department choice answer")?;
+    assert_eq!(department.choice, "warranty");
+    assert_eq!(department.confidence, 0.94);
+    assert_eq!(department.probabilities.get("warranty"), Some(&0.94));
+
+    let severity = response
+        .get_score("severity")
+        .ok_or("expected severity score answer")?;
+    assert_eq!(severity.score, 1.92);
+    assert_eq!(severity.confidence, 0.93);
+    assert_eq!(
+        severity.legend.get("2").map(String::as_str),
+        Some("Product is unusable due to damage or failure")
+    );
+
+    let usage = response.usage.ok_or("expected usage")?;
+    assert_eq!(usage.initial_input_tokens, Some(24));
+    assert_eq!(usage.total_input_tokens, Some(115));
+    assert_eq!(usage.total_output_tokens, Some(12));
+    assert_eq!(usage.total_tokens, Some(127));
+    Ok(())
+}
+
+#[tokio::test]
+async fn create_decision_against_mock_server_with_multimodal_input() -> Result<()> {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/decisions"))
+        .and(header("x-goog-api-key", "test-api-key"))
+        .and(body_json(serde_json::json!({
+            "model": "gemini-decision-1",
+            "input": [
+                {
+                    "type": "text",
+                    "text": "Review the storefront photo."
+                },
+                {
+                    "type": "image",
+                    "uri": "https://generativelanguage.googleapis.com/v1beta/files/store-photo-1",
+                    "mime_type": "image/jpeg"
+                }
+            ],
+            "questions": {
+                "open_sign_lit": {
+                    "type": "noul",
+                    "instructions": "Is the neon OPEN sign illuminated?"
+                }
+            }
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "answers": {
+                "open_sign_lit": {
+                    "type": "noul",
+                    "noul": 0.91,
+                    "confidence": 0.91
+                }
+            }
+        })))
+        .expect(1)
+        .mount(&mock_server)
+        .await;
+
+    let client = GeminiClient::builder("test-api-key")
+        .base_url(mock_server.uri())
+        .build();
+
+    let request = CreateDecisionRequest::builder()
+        .model("gemini-decision-1")
+        .add_input_content(DecisionInputContent::text("Review the storefront photo."))
+        .add_input_content(DecisionInputContent::image_uri(
+            "https://generativelanguage.googleapis.com/v1beta/files/store-photo-1",
+            "image/jpeg",
+        ))
+        .add_noul_question(
+            "open_sign_lit",
+            NoulQuestion::new("Is the neon OPEN sign illuminated?"),
+        )
+        .build()?;
+
+    let response = client.create_decision(&request).await?;
+
+    let ans = response
+        .get_noul("open_sign_lit")
+        .ok_or("expected open_sign_lit answer")?;
+    assert_eq!(ans.noul, 0.91);
+    assert_eq!(ans.confidence, 0.91);
+    Ok(())
+}
+
+#[tokio::test]
+async fn create_decision_against_mock_server_maps_structured_api_error() -> Result<()> {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/decisions"))
+        .and(header("x-goog-api-key", "test-api-key"))
+        .respond_with(ResponseTemplate::new(400).set_body_json(serde_json::json!({
+            "error": {
+                "code": 400,
+                "message": "Unsupported decision model",
+                "status": "INVALID_ARGUMENT"
+            }
+        })))
+        .expect(1)
+        .mount(&mock_server)
+        .await;
+
+    let client = GeminiClient::builder("test-api-key")
+        .base_url(mock_server.uri())
+        .build();
+
+    let request = CreateDecisionRequest::builder()
+        .model("unsupported-decision-model")
+        .text_input("Error mapping test")
+        .add_noul_question("q1", NoulQuestion::new("Is this valid?"))
+        .build()?;
+
+    let err = client
+        .create_decision(&request)
+        .await
+        .err()
+        .ok_or("expected 400 error")?;
+
+    match err {
+        GeminiError::VertexError(vertex_err) => {
+            assert_eq!(vertex_err.code, 400);
+            assert_eq!(vertex_err.status, "INVALID_ARGUMENT");
+            assert_eq!(vertex_err.message, "Unsupported decision model");
+        }
+        other => panic!("expected VertexError, got {other:?}"),
+    }
+    Ok(())
+}

@@ -314,7 +314,7 @@ pub enum PartData {
 #[serde(transparent)]
 struct Base64Bytes(#[serde_as(as = "Base64")] Vec<u8>);
 
-fn encode_base64(bytes: &[u8]) -> String {
+pub(crate) fn encode_base64(bytes: &[u8]) -> String {
     let Ok(Value::String(s)) = serde_json::to_value(Base64Bytes(bytes.to_vec())) else {
         unreachable!("Base64 serialization always produces a JSON string");
     };
